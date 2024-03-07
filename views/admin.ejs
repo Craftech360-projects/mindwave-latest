@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shift + B Pop-up Form</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      /* Apply a background color to the body and center the content */
+      body {
+        background-color: #f2f2f2;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Style the button */
+      #openForm {
+        background-color: #3498db;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      #openForm:hover {
+        background-color: #2980b9;
+      }
+
+      /* Style the headings */
+      h1 {
+        font-size: 24px;
+        color: #333;
+      }
+
+      h2 {
+        font-size: 20px;
+        color: #333;
+      }
+
+      /* Style the popup form */
+      .popup-form {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1;
+        overflow: auto;
+      }
+
+      .popup-content {
+        background-color: #fff;
+        width: 300px;
+        margin: 100px auto;
+        padding: 20px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        text-align: center;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Style the close button */
+      .close {
+        color: #333;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+
+      .close:hover {
+        color: #555;
+      }
+
+      /* Style the form and its elements */
+      #portForm {
+        text-align: left;
+      }
+
+      #portSelect {
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Style the radio buttons and their labels */
+      input[type="radio"] {
+        margin: 5px 0;
+      }
+
+      label {
+        color: #333;
+      }
+
+      /* Style the submit button */
+      button[type="submit"] {
+        background-color: #3498db;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      button[type="submit"]:hover {
+        background-color: #2980b9;
+      }
+    </style>
+  </head>
+  <body>
+    <button id="openForm">If you want to change Port Press(Shift + B)</button>
+    <h1>Selected Com Port Number is <b id="port"></b></h1>
+    <!-- <input type="file" id="imageUpload" name="image" accept="image/*" />
+    <button id="uploadButton">Upload Image</button> -->
+    <div id="popupForm" class="popup-form">
+      <div class="popup-content">
+        <span class="close" id="closeForm">&times;</span>
+        <h2>Pop-up Form</h2>
+        <form id="portForm">
+          <div id="portSelect">
+            <!-- Radio buttons for ports will be added dynamically via JavaScript -->
+          </div>
+          <button type="submit">Submit</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // script.js
+      const socket = io();
+
+      socket.on("selectedPortData", (selectedPort) => {
+        // alert(selectedPort)
+        document.getElementById("port").innerText = selectedPort;
+      });
+
+      const openFormButton = document.getElementById("openForm");
+      const closeFormButton = document.getElementById("closeForm");
+      const popupForm = document.getElementById("popupForm");
+
+      openFormButton.addEventListener("click", () => {
+        popupForm.style.display = "block";
+      });
+
+      closeFormButton.addEventListener("click", () => {
+        popupForm.style.display = "none";
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.shiftKey && event.key === "B") {
+          popupForm.style.display = "block";
+          socket.emit("getComList");
+        }
+      });
+
+      socket.on("comPortList", (ports) => {
+        // Clear the radio list
+        portSelect.innerHTML = "";
+
+        // Loop through the list of ports and add radio buttons to the list
+        ports.forEach((port, index) => {
+          const radioInput = document.createElement("input");
+          radioInput.type = "radio";
+          radioInput.name = "selectedPort";
+          radioInput.value = port.comName;
+          radioInput.id = `portOption${index}`;
+
+          const label = document.createElement("label");
+          label.htmlFor = `portOption${index}`;
+          label.textContent = port.comName;
+
+          portSelect.appendChild(radioInput);
+          portSelect.appendChild(label);
+        });
+      });
+
+      portForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const selectedPortInput = document.querySelector(
+          'input[name="selectedPort"]:checked'
+        );
+
+        if (selectedPortInput) {
+          const selectedPortName = selectedPortInput.value;
+          // Send the selected port name back using socket
+          socket.emit("selectedComPort", selectedPortName);
+        }
+      });
+
+      document.getElementById("uploadButton").addEventListener("click", () => {
+        const imageUploadInput = document.getElementById("imageUpload");
+        const selectedFile = imageUploadInput.files[0];
+
+        if (selectedFile) {
+          const formData = new FormData();
+          formData.append("image", selectedFile);
+
+          fetch("/upload-image", {
+            method: "POST",
+            body: formData, // No need for JSON.stringify here
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // Handle the response from the server, e.g., display a success message
+              console.log(data.message);
+            })
+            .catch((error) => {
+              console.error("Error uploading image:", error);
+            });
+        }
+      });
+    </script>
+  </body>
+</html>

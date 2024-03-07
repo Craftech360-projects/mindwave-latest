@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<style>
+  @font-face {
+    font-family: "ArchivoBlack";
+    src: url("../asset/Archivo_Black/ArchivoBlack-Regular.ttf") format("truetype");
+    /* Adjust the path and font format accordingly */
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    background-image: url("../asset/images/Salesaforce\ BG\ Mindwave.png");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    font-family: "ArchivoBlack", sans-serif;
+  }
+
+  .p1 {
+    border-radius: 45%;
+    background-color: #FFFFFF;
+    width: 30%;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  label {
+    font-weight: bold;
+  }
+
+  input {
+    padding: 10px;
+    background-color: #76C6D5;
+    text-align: center;
+    border: 1px solid #ccc;
+    margin-bottom: 20px;
+    border-radius: 50px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: white;
+    border-color: #FFFFFF;
+    width: 500px;
+
+  }
+
+  input::placeholder {
+    color: white;
+  }
+
+
+  #ONE,
+  #TWO {
+    background-color:grey;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    float: right;
+    
+   
+  }
+  .logo{
+   position: absolute;
+   top: 3%;
+  left: 20px;
+    
+  }
+  .start{
+    position: absolute;
+  }
+
+
+
+  .container {
+    position: relative;
+
+  }
+
+
+  .input-container input:focus {
+    border: 2px solid white;
+    outline: none;
+  }
+
+  .input-container {
+    z-index: 999;
+    justify-content: center;
+  }
+
+  .box {
+    width: 200px;
+    height: 80px;
+    border-radius: 37px;
+    background-color: white;
+    text-align: center;
+    position: absolute;
+    top: 2px;
+    left: 60px;
+    z-index: -1;
+    margin-bottom: 200px;
+
+  }
+
+  .img-p1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: -8px;
+  }
+  .img-start{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: -30px;
+  }
+</style>
+
+<body>
+  <div class="form-container">
+   
+    <form method="post">
+<div>
+  <div class="logo">
+    <img src="../asset/images/logo.png" alt="" width="100px">
+  </div>
+      <div class="container">
+        <div class="img-p1">
+          <img src="../asset/images/player 1.png" alt="" width="300px">
+        </div>
+        <div class="input-container">
+          <input type="text" id="playerone" name="playerone" required placeholder="Enter player-one" />
+        </div>
+        <div id="start">
+          <div id="ONE"></div>
+        </div>
+      </div>
+      <div class="container">
+        <div class="img-p1">
+          <img src="../asset/images/player 2.png" alt="" width="300px">
+        </div>
+        <div class="input-container">
+          <input type="text" id="playertwo" name="playertwo" required placeholder="Enter Player-two" />
+        </div>
+        <div id="start">
+          <div id="TWO"></div>
+        </div>
+
+      </div>
+      <div class="img-start">
+        <img src="./asset/images/start11.png" onclick="saveName()" alt="" style="width: 300px; vertical-align: middle;">
+      </div>
+    </div>
+  
+    </form>
+  </div>
+  <script>
+    const socket = io();
+    const socketTwo = io("http://192.168.0.101:7788");
+
+    const playerOne = document.getElementById("playerone");
+    const playerTwo = document.getElementById("playertwo");
+    const isOneActive = document.getElementById("ONE");
+    const isTwoActive = document.getElementById("TWO");
+
+    socket.on("meditation", (e) => {
+      if (e > 0) {
+        isOneActive.style.backgroundColor = "green";
+      } else {
+        isOneActive.style.backgroundColor = "grey";
+      }
+    });
+
+    socketTwo.on("meditation", (e) => {
+      if (e > 0) {
+        isTwoActive.style.backgroundColor = "green";
+      } else {
+        isTwoActive.style.backgroundColor = "grey";
+      }
+    });
+
+    function saveName() {
+      const data = {
+        playerone: playerOne.value,
+        playertwo: playerTwo.value,
+      };
+      socketTwo.emit("start");
+      socket.emit("start", data);
+      playerOne.value = "";
+      playerTwo.value = ";";
+    }
+  </script>
+</body>
+
+</html>
