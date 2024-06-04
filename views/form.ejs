@@ -4,12 +4,11 @@
     <script src="/socket.io/socket.io.js"></script>
   </head>
   <style>
-    @font-face {
+    /* @font-face {
       font-family: "ArchivoBlack";
       src: url("../asset/Archivo_Black/ArchivoBlack-Regular.ttf")
         format("truetype");
-      /* Adjust the path and font format accordingly */
-    }
+    } */
 
     body {
       display: flex;
@@ -23,7 +22,7 @@
       background-position: center;
       background-size: cover;
       background-repeat: no-repeat;
-      font-family: "ArchivoBlack", sans-serif;
+      font-family:sans-serif;
     }
 
     .p1 {
@@ -37,24 +36,33 @@
       flex-direction: column;
     }
 
+    section{
+      width: 100vw;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-evenly;
+      align-items: center;
+    }
+
     label {
       font-weight: bold;
     }
 
     input {
-      padding: 25px;
-      padding-left: 40px;
+      padding: 20px;
+      /* padding-left: 40px; */
       background-color: transparent;
       text-align: left;
       border: 3px solid #ffffff;
       margin-bottom: 20px;
       border-radius: 50px;
-      font-size: 1.5rem;
+      font-size: 1rem;
       font-weight: bold;
       text-transform: uppercase;
       color: white;
       border-color: #ffffff;
-      width: 500px;
+      width: 400px;
+      box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
     }
 
     input::placeholder {
@@ -68,7 +76,7 @@
 
     #ONE,
     #TWO {
-      position: absolute;
+      /* position: absolute; */
       background-color: grey;
       width: 20px;
       height: 20px;
@@ -96,7 +104,11 @@
 
     .input-container {
       z-index: 999;
-      justify-content: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 30px;
     }
 
     .box {
@@ -121,81 +133,98 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      margin-top: 60px;
-    }
-    .dot {
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      /* margin-top: 60px; */
     }
   </style>
 
   <body>
-    <div class="form-container">
-      <form method="post">
-        <div>
-          <!-- <div class="logo">
-    <img src="../asset/images/logo.png" alt="" width="100px">
-  </div> -->
-          <div class="container">
-            <div class="img-p1">
-              <img src="../asset/images/player1.png" alt="" width="200px" />
-            </div>
-            <div class="dot">
-              <div class="input-container">
-                <input
-                  type="text"
-                  id="playerone"
-                  name="playerone"
-                  required
-                  placeholder="Enter Name"
-                />
-              </div>
-              <div id="start">
-                <div id="ONE"></div>
-              </div>
-            </div>
-          </div>
-          <div class="container">
-            <div class="img-p1">
-              <img src="../asset/images/player2.png" alt="" width="200px" />
-            </div>
-            <div class="dot">
-              <div class="input-container">
-                <input
-                  type="text"
-                  id="playertwo"
-                  name="playertwo"
-                  required
-                  placeholder="Enter Name"
-                />
-              </div>
-              <div id="start">
-                <div id="TWO"></div>
-              </div>
-            </div>
-          </div>
-          <div class="img-start">
-            <img
-              src="./asset/images/start.png"
-              onclick="saveName()"
-              alt=""
-              style="width: 200px; vertical-align: middle"
-            />
-          </div>
+    <form id="form">
+      <section>
+        
+      <div>
+
+        <div class="img-p1">
+          <img src="../asset/images/player1.png" alt="" width="200px" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;border-top-left-radius: 48px;border-top-right-radius: 48px;" />
         </div>
-      </form>
+  
+        <div class="input-container">
+          <input
+            type="text"
+            id="playerone"
+            name="playerone"
+            required
+            placeholder="Enter Name"
+          />
+          <input
+            type="number"
+            id="playeroneage"
+            name="playeroneage"
+            required
+            placeholder="Enter Age"
+          />
+          <div id="ONE"></div>
+        </div>
+
+      </div>
+
+     <div>
+      <div class="img-p1">
+        <img src="../asset/images/player2.png" alt="" width="200px" style="box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;border-top-left-radius: 48px;border-top-right-radius: 48px;"/>
+      </div>
+
+      <div class="input-container">
+        <input
+          type="text"
+          id="playertwo"
+          name="playertwo"
+          required
+          placeholder="Enter Name"
+        />
+        <input
+          type="number"
+          id="playertwoage"
+          name="playertwoage"
+          required
+          placeholder="Enter Age"
+        />
+        <div id="TWO"></div>
+      </div>
+
+      </section>
+     </div>
+      <div class="img-start">
+        <img
+          src="./asset/images/start.png"
+          onclick="saveName()"
+          alt=""
+          style="width: 200px; vertical-align: middle;  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;border-radius: 33px;"
+        />
+      </div>
+
+    </form>
+
+    <div id="game-started" style="display: none;">
+      <h1>Game started.......</h1>
+    </div>
+    <div id="winnerContainer" style="display: none;">
+      <h1 id="winnerName"></h1>
     </div>
     <script>
-      const socket = io();
-      const socketTwo = io("http://192.168.1.158:3000");
+      const socketOne = io();
+      const socketTwo = io();
 
-      const playerOne = document.getElementById("playerone");
-      const playerTwo = document.getElementById("playertwo");
+      const playerOneName = document.getElementById("playerone");
+      const playerTwoName = document.getElementById("playertwo");
+      const playerOneAge = document.getElementById("playeroneage");
+      const playerTwoAge = document.getElementById("playertwoage");
       const isOneActive = document.getElementById("ONE");
       const isTwoActive = document.getElementById("TWO");
+      const form = document.getElementById("form");
+      const gameStarted = document.getElementById("game-started");
+      const winnerContainer = document.getElementById("winnerContainer");
+      const winnerName = document.getElementById("winnerName");
 
-      socket.on("meditation", (e) => {
+      socketOne.on("meditation", (e) => {
         if (e > 0) {
           isOneActive.style.backgroundColor = "green";
         } else {
@@ -213,14 +242,59 @@
 
       function saveName() {
         const data = {
-          playerone: playerOne.value,
-          playertwo: playerTwo.value,
+          playerOneName: playerOneName.value,
+          playerTwoName: playerTwoName.value,
+          playerOneAge:playerOneAge.value,
+          playerTwoAge:playerTwoAge.value,
+
         };
-        socketTwo.emit("start");
-        socket.emit("start", data);
-        playerOne.value = "";
-        playerTwo.value = "";
+        console.log(data);
+        // socketTwo.emit("start");
+        socketOne.emit("start", data);
+        form.style.display = "none";
+        gameStarted.style.display = "flex";
       }
+
+      var Timer = 10;
+      var goBack = () => {
+        startTimerInterval = setInterval(() => {
+          Timer--;
+          if (Timer == 0) {
+            window.location.reload();
+          }
+        }, 1000);
+      };
+
+      let hasWinnerBeenCalled = false;
+
+      function handleWinner(playerNumber) {
+        gameStarted.style.display = 'none';
+        
+        if (!hasWinnerBeenCalled) {
+          hasWinnerBeenCalled = true;
+          goBack();
+          let playerName;
+          if (playerNumber === 1) {
+            playerName = playerOneName.value;
+            // socketTwo.emit("stop");
+          } else if (playerNumber === 2) {
+            playerName = playerTwoName.value;
+            // socketTwo.emit("stop");
+            console.log(playerName);
+          }
+          winnerContainer.style.display = 'flex';
+          winnerName.innerText = playerName;
+          console.log(playerName);
+        }
+      }
+
+      socketOne.on("winnerOne", () => {
+        handleWinner(1);
+      });
+
+      // socketTwo.on("winnerTwo", () => {
+      //   handleWinner(2);
+      // });
     </script>
   </body>
 </html>

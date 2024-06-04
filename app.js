@@ -1,15 +1,15 @@
 const express = require("express"),
-  app = express(),
-  server = require("http").Server(app),
-  io = require("socket.io")(server),
-  port = 3000,
-  path = require("path"),
-  bodyParser = require("body-parser"),
-  thinkgear = require("node-thinkgear-sockets"),
-  client = thinkgear.createClient({ enableRawOutput: false }),
-  SerialPort = require("serialport"),
-  sqlite3 = require("sqlite3"),
-  fs = require("fs");
+      app = express(),
+      server = require("http").Server(app),
+      io = require("socket.io")(server),
+      port = 3000,
+      path = require("path"),
+      bodyParser = require("body-parser"),
+      thinkgear = require("node-thinkgear-sockets"),
+      client = thinkgear.createClient({ enableRawOutput: false }),
+      SerialPort = require("serialport"),
+      sqlite3 = require("sqlite3"),
+      fs = require("fs");
 
 const db = new sqlite3.Database("winnerList.db", (err) => {
   if (err) {
@@ -19,7 +19,7 @@ const db = new sqlite3.Database("winnerList.db", (err) => {
   }
 });
 
-db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
+db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, playerOneName TEXT, playerOneAge NUMBER, playerTwoName TEXT, playerTwoAge NUMBER)");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -44,13 +44,28 @@ io.on("connection", function (socket) {
 
   //Writing 'S' to serial port to start and send name to main screen.
   socket.on("start", (e) => {
-    usbport.write("s", function (err) {
-      if (err) {
-        return console.log("Error on write: ", err.message);
+    console.log("userdata",e);
+    // usbport.write("s", function (err) {
+    //   if (err) {
+    //     return console.log("Error on write: ", err.message);
+    //   }
+    //   console.log("message written as " + "s");
+    db.run(
+      "INSERT INTO users (playerOneName,playerOneAge,playerTwoName,playerTwoAge)  VALUES (?,?,?,?)", e.playerOneName,e.playerOneAge,e.playerTwoName,e.playerTwoAge,
+      function (err) {
+        if (err) {
+          console.error("Error inserting data:", err.message);
+        } else {
+          console.log(`Row inserted with ID: ${this.lastID}`);
+          setTimeout(()=> {
+            io.emit("winnerOne");
+          },10000)
+        }
       }
-      console.log("message written as " + "s");
-      io.emit("getUser", e);
-    });
+    );
+
+    
+    // });
   });
 
   //Writing 'F' to serial port to stop.
@@ -110,24 +125,24 @@ fs.readFile('selectedPort.json', (err, data) => {
   if (err) {
     console.error('Error reading selectedPort.json:', err);
   } else {
-    const selectedPort = JSON.parse(data);
-    console.log(`Conneted to Com Port ${selectedPort}`);
-    io.emit('selectedPortData', selectedPort);
+    // const selectedPort = JSON.parse(data);
+    // console.log(`Conneted to Com Port ${selectedPort}`);
+    // io.emit('selectedPortData', selectedPort);
     
-    //Initializing Serial Port
-    Readline = SerialPort.parsers.Readline;
-    usbport = new SerialPort(selectedPort, {
-      baudRate: 115200,
-    });
-    parser = usbport.pipe(new Readline());
+    // //Initializing Serial Port
+    // Readline = SerialPort.parsers.Readline;
+    // usbport = new SerialPort(selectedPort, {
+    //   baudRate: 115200,
+    // });
+    // parser = usbport.pipe(new Readline());
 
     //Reading winner from serial port
-    parser.on("data", function (data) {
-      console.log("data from ardiono winner");
-      if (data == 1) {
-        io.emit("winnerOne");
-      }
-    });
+    // parser.on("data", function (data) {
+    //   console.log("data from ardiono winner");
+    //   if (data == 1) {
+    //     io.emit("winnerOne");
+    //   }
+    // });
 
     //Reading data from MindWave headset, calculating speed based coming data and writing speed to serial port
     client.on("data", function (data) {
