@@ -157,20 +157,21 @@
 
       #nameDiv {
         display: flex;
-        justify-content: space-between;
+        justify-content: space-around;
         align-items: center;
         border-radius: 40px;
-        width: 65vw;
-        margin-bottom: 200px;
+        gap: 400px;
+     width: 48%;
+        
       }
 
       .nameDemo {
-        height: 50vh;
+        /* height: 50vh;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        width: 100vw;
+        width: 100vw; */
         margin-top: 300px;
 
         /* background-color: red; */
@@ -179,8 +180,9 @@
       #demoWidget {
         width: 100vw;
         display: flex;
-        justify-content: space-around;
+        justify-content: center;
         align-items: center;
+        gap: 200px;
         border-radius: 40px;
       }
 
@@ -321,7 +323,7 @@
     <!-- <div id="clock" style="z-index: 999">
     <h1 id="timer">45</h1>
   </div> -->
-    <div class="maindiv" style="display: none" >
+    <div class="maindiv"  >
       <div class="nameDemo">
         <div id="demoWidget"></div>
       </div>
@@ -330,7 +332,7 @@
       </div>
     </div>
 
-    <div id="winner" style="display: block">
+    <div id="winner" style="display: none">
       <div class="congrats">
         <img src="../asset/images/congrats.png" alt="" width="1200px" />
       </div>
