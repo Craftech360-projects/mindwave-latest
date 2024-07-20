@@ -21,10 +21,24 @@
     <script type="text/javascript" src="/asset/js/jqxgauge.js"></script>
     <style type="text/css">
       @font-face {
-        font-family: "ArchivoBlack";
-        src: url("../asset/Archivo_Black/ArchivoBlack-Regular.ttf")
-          format("truetype");
-        /* Adjust the path and font format accordingly */
+        font-family: "Font1";
+        src: url("../asset/images/Fonts/ABCWhyte-Regular\ \(1\).ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+      }
+
+      @font-face {
+        font-family: "Font2";
+        src: url("../asset/images/Fonts/ABCWhyte-Medium\ \(1\).ttf") format("truetype");
+        font-weight: normal;
+        font-style: normal;
+      }
+      .nameContainerr {
+        font-family: "Font1"; /* Fallback to sans-serif if the custom font fails to load */
+      }
+      .nameDiv2{
+        font-family: "Font2"; /* Fallback to sans-serif if the custom font fails to load */
+
       }
 
       html,
@@ -40,7 +54,6 @@
         display: flex;
         flex-direction: column;
         justify-content: space-around;
-        font-family: "ArchivoBlack";
       }
 
       #gaugeValue {
@@ -143,19 +156,23 @@
       }
 
       #nameDiv {
-        width: 100vw;
         display: flex;
-        justify-content: space-around;
+        justify-content: space-between;
         align-items: center;
         border-radius: 40px;
+        width: 65vw;
+        margin-bottom: 200px;
       }
 
       .nameDemo {
-        height: 100vh;
+        height: 50vh;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        width: 100vw;
+        margin-top: 300px;
+
         /* background-color: red; */
       }
 
@@ -199,11 +216,12 @@
         width: 100vw;
         height: 100vh;
         display: flex;
-      flex-direction: column;
+        flex-direction: column;
 
         justify-content: center;
         align-items: center;
         font-size: 2rem;
+        margin-top: 300px;
       }
 
       #winner h1 {
@@ -216,14 +234,13 @@
       }
 
       .congrats {
-       
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
       #gaugeContainer1 {
-        /* background: #00bcea; */
+        background: #e5d4ff;
         /* background: linear-gradient(
           222deg,
           rgba(99, 193, 204, 1) #9cd4d9,
@@ -239,7 +256,7 @@
       }
 
       #gaugeContainer2 {
-        /* background: #00bcea; */
+        background: #e5d4ff;
         /* background: linear-gradient(
           222deg,
           rgba(99, 193, 204, 1) #9cd4d9,
@@ -255,36 +272,45 @@
       }
 
       #player1 {
-        background: white;
+        /* background: white; */
         border-radius: 200px;
         height: 70px;
         width: 240px;
-        color: #13284c;
+        color: white;
         text-align: center;
         padding-top: 14px;
         font-size: 30px;
         margin-bottom: -30;
       }
       #player2 {
-        background: white;
+        /* background: white; */
         border-radius: 200px;
         height: 70px;
-        color: #13284c;
+        color: white;
         width: 240px;
         text-align: center;
         padding-top: 14px;
         font-size: 30px;
         margin-bottom: -30;
       }
-     
-    #name{
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-family: Helvetica;
-      font-size: 80px;
-    }
+
+      #name {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 100px;
+        margin-top: 10px;
+        text-transform: uppercase;
+      }
+      .nameDiv2 {
+        width: 100vw;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+      }
+
       /* .nameContainerr h1 {
         margin-top: 10px;
       } */
@@ -295,20 +321,21 @@
     <!-- <div id="clock" style="z-index: 999">
     <h1 id="timer">45</h1>
   </div> -->
-    <div class="nameDemo" >
-      <div id="nameDiv"></div>
-
-      <div id="demoWidget"></div>
+    <div class="maindiv" style="display: none" >
+      <div class="nameDemo">
+        <div id="demoWidget"></div>
+      </div>
+      <div class="nameDiv2">
+        <div id="nameDiv"></div>
+      </div>
     </div>
 
-    <div id="winner" style="display: none;">
-    
-
+    <div id="winner" style="display: block">
       <div class="congrats">
         <img src="../asset/images/congrats.png" alt="" width="1200px" />
       </div>
       <div class="nameContainerr">
-        <h2 id="name" style="padding-top: 10px">Yamuna</h2>
+        <h2 id="name">Yamuna</h2>
       </div>
     </div>
     <script type="text/javascript">
@@ -436,7 +463,7 @@
 
       // const socket =io();
       // const socketTwo =io();
-      const nameDiv = document.getElementById("nameDiv");
+      const nameDiv = document.getElementById("nameDiv2");
       const clock = document.getElementById("clock");
       const demoWidget = document.getElementById("demoWidget");
       const winnerDiv = document.getElementById("winner");
@@ -480,7 +507,9 @@
       function winnerFunction(value) {
         document.getElementById("gaugeContainer2").style.display = "none";
         document.getElementById("gaugeContainer1").style.display = "none";
-        nameDiv.style.display = "none";
+        document.querySelector(".maindiv").style.display = "none";
+        // document.querySelector(".nameDiv2").style.display="none"
+        // nameDiv.style.display = "none";
         // clock.style.display = "none";
 
         demoWidget.style.display = "none";
