@@ -44,6 +44,7 @@ io.on("connection", function (socket) {
 
   //Writing 'S' to serial port to start and send name to main screen.
   socket.on("start", (e) => {
+    console.log(e);
     usbport.write("s", function (err) {
       if (err) {
         return console.log("Error on write: ", err.message);
@@ -113,7 +114,7 @@ fs.readFile('selectedPort.json', (err, data) => {
     const selectedPort = JSON.parse(data);
     console.log(`Conneted to Com Port ${selectedPort}`);
     io.emit('selectedPortData', selectedPort);
-    
+
     //Initializing Serial Port
     Readline = SerialPort.parsers.Readline;
     usbport = new SerialPort(selectedPort, {
@@ -123,8 +124,8 @@ fs.readFile('selectedPort.json', (err, data) => {
 
     //Reading winner from serial port
     parser.on("data", function (data) {
-      console.log("data from ardiono winner");
       if (data == 1) {
+        console.log("data from ardiono winner");
         io.emit("winnerOne");
       }
     });

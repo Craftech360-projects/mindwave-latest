@@ -5,15 +5,16 @@
   </head>
   <style>
     @font-face {
-        font-family: "Font1";
-        src: url("../asset/images/Fonts/ABCWhyte-Regular\ \(1\).ttf") format("truetype");
-        font-weight: normal;
-        font-style: normal;
-      }
+      font-family: "Font1";
+      src: url("../asset/images/Fonts/ABCWhyte-Regular\ \(1\).ttf")
+        format("truetype");
+      font-weight: normal;
+      font-style: normal;
+    }
 
     input {
-        font-family: "Font1"; /* Fallback to sans-serif if the custom font fails to load */
-      }
+      font-family: "Font1"; /* Fallback to sans-serif if the custom font fails to load */
+    }
 
     body {
       display: flex;
@@ -137,7 +138,7 @@
       justify-content: center;
       align-items: center;
     }
-    #playerone{
+    #playerone {
       background-color: #ffffff;
     }
   </style>
@@ -200,7 +201,7 @@
     </div>
     <script>
       const socket = io();
-      const socketTwo = io("http://192.168.1.158:3000");
+      const socketTwo = io("http://192.168.1.78:3000");
 
       const playerOne = document.getElementById("playerone");
       const playerTwo = document.getElementById("playertwo");

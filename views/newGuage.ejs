@@ -22,23 +22,24 @@
     <style type="text/css">
       @font-face {
         font-family: "Font1";
-        src: url("../asset/images/Fonts/ABCWhyte-Regular\ \(1\).ttf") format("truetype");
+        src: url("../asset/images/Fonts/ABCWhyte-Regular\ \(1\).ttf")
+          format("truetype");
         font-weight: normal;
         font-style: normal;
       }
 
       @font-face {
         font-family: "Font2";
-        src: url("../asset/images/Fonts/ABCWhyte-Medium\ \(1\).ttf") format("truetype");
+        src: url("../asset/images/Fonts/ABCWhyte-Medium\ \(1\).ttf")
+          format("truetype");
         font-weight: normal;
         font-style: normal;
       }
       .nameContainerr {
         font-family: "Font1"; /* Fallback to sans-serif if the custom font fails to load */
       }
-      .nameDiv2{
+      .nameDiv2 {
         font-family: "Font2"; /* Fallback to sans-serif if the custom font fails to load */
-
       }
 
       html,
@@ -161,8 +162,7 @@
         align-items: center;
         border-radius: 40px;
         gap: 400px;
-     width: 48%;
-        
+        width: 48%;
       }
 
       .nameDemo {
@@ -310,7 +310,6 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        
       }
 
       /* .nameContainerr h1 {
@@ -323,7 +322,7 @@
     <!-- <div id="clock" style="z-index: 999">
     <h1 id="timer">45</h1>
   </div> -->
-    <div class="maindiv"  >
+    <div class="maindiv">
       <div class="nameDemo">
         <div id="demoWidget"></div>
       </div>
@@ -342,7 +341,7 @@
     </div>
     <script type="text/javascript">
       const socket1 = io();
-      const socket2 = io("http://192.168.1.158:3000");
+      const socket2 = io("http://192.168.1.78:3000");
       // Initialize the gauge
       function initializeGaugeAndSocket(containerId) {
         $(document).ready(function () {
@@ -412,7 +411,7 @@
         },
         {
           containerId: "#gaugeContainer2",
-          socketUrl: "http://192.168.1.158:3000",
+          socketUrl: "http://192.168.1.78:3000",
           index: 2,
         },
         // Add more configurations as needed
@@ -478,17 +477,19 @@
       function handleWinner(playerNumber) {
         if (!hasWinnerBeenCalled) {
           hasWinnerBeenCalled = true;
-          stopHere();
+          // stopHere();
+          startHere();
           let playerName;
           if (playerNumber === 1) {
+            console.log(playerNumber);
             playerName = playerOne.innerText;
             socket1.emit("winnerName", playerName);
             socket2.emit("stop");
           } else if (playerNumber === 2) {
+            console.log(playerNumber);
             playerName = playerTwo.innerText;
             socket1.emit("winnerName", playerName);
             socket2.emit("stop");
-            console.log(playerName);
           }
 
           let message = `${playerName} `;
@@ -522,6 +523,7 @@
       }
 
       socket1.on("getUser", (e) => {
+        console.log(e);
         playerOne.innerText = e.playerone;
         playerTwo.innerText = e.playertwo;
 
@@ -536,20 +538,18 @@
             $("#gaugeContainer2").jqxGauge("value", e);
           }
         });
-
-        startHere();
       });
 
-      var MainTimer = 45;
+      var MainTimer = 5;
       var startTimerInterval;
       var timer = document.getElementById("timer");
       var startHere = () => {
         startTimerInterval = setInterval(() => {
           MainTimer--;
-          timer.innerHTML = MainTimer;
           if (MainTimer == 0) {
             clearInterval(startTimerInterval);
-            goBack();
+            // goBack();
+            window.location.reload();
           }
         }, 1000);
       };
