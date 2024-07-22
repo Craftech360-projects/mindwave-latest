@@ -19,7 +19,7 @@ const db = new sqlite3.Database("winnerList.db", (err) => {
   }
 });
 
-db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
+db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT,playerone TEXT, playertwo TEXT)");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -45,23 +45,40 @@ io.on("connection", function (socket) {
   //Writing 'S' to serial port to start and send name to main screen.
   socket.on("start", (e) => {
     console.log(e);
+    io.emit("getUser", e);
+
     usbport.write("s", function (err) {
       if (err) {
         return console.log("Error on write: ", err.message);
       }
       console.log("message written as " + "s");
-      io.emit("getUser", e);
     });
   });
 
   //Writing 'F' to serial port to stop.
-  socket.on("stop", (e) => {
+  socket.on("stop", () => {
+
+    console.log("stopp recivede ")
     usbport.write("f", function (err) {
       if (err) {
         return console.log("Error on write: ", err.message);
       }
       console.log("message written as " + "f");
     });
+  });
+
+  socket.on("savePlayers", (data) => {
+    db.run(
+      "INSERT INTO users (playerone, playertwo) VALUES (?, ?)",
+      [data.playerone, data.playertwo],
+      function (err) {
+        if (err) {
+          console.error("Error inserting data:", err.message);
+        } else {
+          console.log(`Row inserted with ID: ${this.lastID}`);
+        }
+      }
+    );
   });
 
   // Winner name wil be saved DB.
@@ -127,6 +144,12 @@ fs.readFile('selectedPort.json', (err, data) => {
       if (data == 1) {
         console.log("data from ardiono winner");
         io.emit("winnerOne");
+        usbport.write("f", function (err) {
+          if (err) {
+            return console.log("Error on write: ", err.message);
+          }
+          console.log("message written as " + "f");
+        });
       }
     });
 
@@ -142,7 +165,7 @@ fs.readFile('selectedPort.json', (err, data) => {
           if (err) {
             return console.log("Error on write: ", err.message);
           }
-          console.log("message written as " + "a");
+          // console.log("message written as " + "a");
         });
       }
 
@@ -151,7 +174,7 @@ fs.readFile('selectedPort.json', (err, data) => {
           if (err) {
             return console.log("Error on write: ", err.message);
           }
-          console.log("message written as " + "b");
+          // console.log("message written as " + "b");
         });
       }
 
@@ -160,7 +183,7 @@ fs.readFile('selectedPort.json', (err, data) => {
           if (err) {
             return console.log("Error on write: ", err.message);
           }
-          console.log("message written as " + "c");
+          // console.log("message written as " + "c");
         });
       }
 
@@ -169,7 +192,7 @@ fs.readFile('selectedPort.json', (err, data) => {
           if (err) {
             return console.log("Error on write: ", err.message);
           }
-          console.log("message written as " + "d");
+          // console.log("message written as " + "d");
         });
       }
 

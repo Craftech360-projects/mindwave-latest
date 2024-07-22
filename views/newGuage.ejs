@@ -341,7 +341,7 @@
     </div>
     <script type="text/javascript">
       const socket1 = io();
-      const socket2 = io("http://192.168.1.78:3000");
+      const socket2 = io("http://192.168.0.158:3000");
       // Initialize the gauge
       function initializeGaugeAndSocket(containerId) {
         $(document).ready(function () {
@@ -411,7 +411,7 @@
         },
         {
           containerId: "#gaugeContainer2",
-          socketUrl: "http://192.168.1.78:3000",
+          socketUrl: "http://192.168.0.158:3000",
           index: 2,
         },
         // Add more configurations as needed
@@ -479,30 +479,37 @@
           hasWinnerBeenCalled = true;
           // stopHere();
           startHere();
+
           let playerName;
           if (playerNumber === 1) {
             console.log(playerNumber);
             playerName = playerOne.innerText;
             socket1.emit("winnerName", playerName);
-            socket2.emit("stop");
+            console.log("stop emittinggg for 1");
           } else if (playerNumber === 2) {
             console.log(playerNumber);
             playerName = playerTwo.innerText;
             socket1.emit("winnerName", playerName);
+            console.log("stop emittinggg for 2");
+
             socket2.emit("stop");
           }
 
           let message = `${playerName} `;
           winnerFunction(message);
-          console.log(message);
+          console.log("gggg", message);
         }
       }
 
       socket1.on("winnerOne", () => {
+        socket2.emit("stop");
+        socket1.emit("stop");
         handleWinner(1);
       });
 
       socket2.on("winnerTwo", () => {
+        socket2.emit("stop");
+        socket1.emit("stop");
         handleWinner(2);
       });
       // winnerFunction('value')

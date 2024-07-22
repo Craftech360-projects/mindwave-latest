@@ -53,13 +53,14 @@
       text-align: left;
       border: 3px solid #ffffff;
       margin-bottom: 20px;
-      border-radius: 50px;
+      border-radius: 30px;
       font-size: 1.5rem;
       font-weight: bold;
       text-transform: uppercase;
       color: black;
       border-color: #ffffff;
-      width: 500px;
+      width: 550px;
+      height: 40px;
     }
 
     input::placeholder {
@@ -141,12 +142,15 @@
     #playerone {
       background-color: #ffffff;
     }
+    .maindiv6 {
+      margin-top: 60px;
+    }
   </style>
 
   <body>
     <div class="form-container">
       <form method="post">
-        <div>
+        <div class="maindiv6">
           <!-- <div class="logo">
     <img src="../asset/images/logo.png" alt="" width="100px">
   </div> -->
@@ -193,7 +197,7 @@
               src="./asset/images/start.png"
               onclick="saveName()"
               alt=""
-              style="width: 560px; height: 87px; vertical-align: middle"
+              style="width: 360px; height: 87px; vertical-align: middle"
             />
           </div>
         </div>
@@ -201,7 +205,7 @@
     </div>
     <script>
       const socket = io();
-      const socketTwo = io("http://192.168.1.78:3000");
+      const socketTwo = io("http://192.168.0.158:3000");
 
       const playerOne = document.getElementById("playerone");
       const playerTwo = document.getElementById("playertwo");
@@ -230,9 +234,11 @@
           playertwo: playerTwo.value,
         };
         socketTwo.emit("start");
+
         socket.emit("start", data);
         playerOne.value = "";
         playerTwo.value = "";
+        socket.emit("savePlayers", data);
       }
     </script>
   </body>
