@@ -1,2 +1,2 @@
-"# mindWaveNewOne" 
-"# mindWaveNewOne" 
+Mind Wave Client
+Only For Emitting Data
