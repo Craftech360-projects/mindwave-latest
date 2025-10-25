@@ -123,7 +123,6 @@ fs.readFile('selectedPort.json', (err, data) => {
 
     //Reading winner from serial port
     parser.on("data", function (data) {
-      console.log("data from ardiono winner");
       if (data == 1) {
         io.emit("winnerOne");
       }
