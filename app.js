@@ -65,55 +65,50 @@ io.on("connection", function (socket) {
 
   // Winner name wil be saved DB.
   socket.on("winnerName", (e) => {
-    db.run(
-      "INSERT INTO users (name) VALUES (?)", e,
-      function (err) {
-        if (err) {
-          console.error("Error inserting data:", err.message);
-        } else {
-          console.log(`Row inserted with ID: ${this.lastID}`);
-        }
+    db.run("INSERT INTO users (name) VALUES (?)", e, function (err) {
+      if (err) {
+        console.error("Error inserting data:", err.message);
+      } else {
+        console.log(`Row inserted with ID: ${this.lastID}`);
       }
-    );
+    });
   });
 
-  fs.readFile('selectedPort.json', (err, data) => {
+  fs.readFile("selectedPort.json", (err, data) => {
     if (err) {
-      console.error('Error reading selectedPort.json:', err);
+      console.error("Error reading selectedPort.json:", err);
     } else {
       const selectedPort = JSON.parse(data);
-      socket.emit('selectedPortData', selectedPort);
+      socket.emit("selectedPortData", selectedPort);
     }
-
   });
 
   //To get COM port list.
-  socket.on('getComList', () => {
-    SerialPort.list().then(e => {
-      io.emit('comPortList', e)
-    });
-  })
-
-  //Sending selected COM to client.
-  socket.on('selectedComPort', (selectedPort) => {
-    fs.writeFile('selectedPort.json', JSON.stringify(selectedPort), (err) => {
-      if (err) {
-        console.error('Error writing selectedPort.json:', err);
-      }
+  socket.on("getComList", () => {
+    SerialPort.list().then((e) => {
+      io.emit("comPortList", e);
     });
   });
 
+  //Sending selected COM to client.
+  socket.on("selectedComPort", (selectedPort) => {
+    fs.writeFile("selectedPort.json", JSON.stringify(selectedPort), (err) => {
+      if (err) {
+        console.error("Error writing selectedPort.json:", err);
+      }
+    });
+  });
 });
 
 //For Selecting port from json file
-fs.readFile('selectedPort.json', (err, data) => {
+fs.readFile("selectedPort.json", (err, data) => {
   if (err) {
-    console.error('Error reading selectedPort.json:', err);
+    console.error("Error reading selectedPort.json:", err);
   } else {
     const selectedPort = JSON.parse(data);
     console.log(`Conneted to Com Port ${selectedPort}`);
-    io.emit('selectedPortData', selectedPort);
-    
+    io.emit("selectedPortData", selectedPort);
+
     //Initializing Serial Port
     Readline = SerialPort.parsers.Readline;
     usbport = new SerialPort(selectedPort, {
@@ -131,49 +126,42 @@ fs.readFile('selectedPort.json', (err, data) => {
     //Reading data from MindWave headset, calculating speed based coming data and writing speed to serial port
     client.on("data", function (data) {
       var myobj = data;
-      console.log(myobj.eSense.attention);
-      var data = myobj.eSense.attention;
-      io.emit("meditation", data);
+      if (!myobj.eSense || myobj.eSense.attention === undefined) return; // safety check
 
-      if (data > 0 && data <= 20) {
+      var attention = myobj.eSense.attention;
+      console.log("Attention:", attention);
+      io.emit("meditation", attention);
+
+      if (attention >= 0 && attention < 5) {
+        usbport.write("e", function (err) {
+          if (err) {
+            return console.log("Error on write: ", err.message);
+          }
+          console.log("message written as e");
+        });
+      } else if (attention > 5 && attention <= 20) {
         usbport.write("a", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "a");
+          if (err) return console.log("Error on write: ", err.message);
+          console.log("message written as a");
         });
-      }
-
-      if (data > 20 && data <= 40) {
+      } else if (attention > 20 && attention <= 40) {
         usbport.write("b", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "b");
+          if (err) return console.log("Error on write: ", err.message);
+          console.log("message written as b");
         });
-      }
-
-      if (data > 40 && data <= 70) {
+      } else if (attention > 40 && attention <= 70) {
         usbport.write("c", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "c");
+          if (err) return console.log("Error on write: ", err.message);
+          console.log("message written as c");
         });
-      }
-
-      if (data > 70) {
+      } else if (attention > 70) {
         usbport.write("d", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "d");
+          if (err) return console.log("Error on write: ", err.message);
+          console.log("message written as d");
         });
       }
-
     });
-
   }
-})
+});
 
 client.connect();
