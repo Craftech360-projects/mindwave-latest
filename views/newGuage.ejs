@@ -128,7 +128,7 @@
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap:60px;
+        gap: 60px;
       }
 
       #demoWidget {
@@ -187,7 +187,7 @@
         position: relative;
         width: 400px;
         height: 400px;
-        background-image: url('../asset/images/gauge.png');
+        background-image: url("../asset/images/gauge.png");
         background-size: contain;
         background-position: center;
         background-repeat: no-repeat;
@@ -199,7 +199,7 @@
       .gauge-percentage {
         font-size: 80px;
         font-weight: bold;
-        color: #FFCD11;
+        color: #ffcd11;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
         font-family: "ArchivoBlack", sans-serif;
       }
@@ -212,48 +212,47 @@
         /* Additional styles if needed */
       }
 
-   #player1 {
-  background: white;
-  height: 70px;
-  width: 420px;
-  color: black;
-  text-align: center;
-  padding-top: 14px;
-  font-size: 30px;
-  background-color: transparent;
+      #player1 {
+        background: white;
+        height: 70px;
+        width: 420px;
+        color: black;
+        text-align: center;
+        padding-top: 14px;
+        font-size: 30px;
+        background-color: transparent;
 
-  /* 🖼️ Background image */
-  background-image: url("../asset/images/playerbg.png");
-  background-size: cover;         /* Make image cover the div */
-  background-position: center;    /* Center the image */
-  background-repeat: no-repeat;   /* Prevent tiling */
-}
-#player2 {
-  background: white;
-  height: 70px;
-  color: black;
-  width: 420px;
-  text-align: center;
-  padding-top: 14px;
-  font-size: 30px;
-    background-color: transparent;
+        /* 🖼️ Background image */
+        background-image: url("../asset/images/playerbg.png");
+        background-size: cover; /* Make image cover the div */
+        background-position: center; /* Center the image */
+        background-repeat: no-repeat; /* Prevent tiling */
+      }
+      #player2 {
+        background: white;
+        height: 70px;
+        color: black;
+        width: 420px;
+        text-align: center;
+        padding-top: 14px;
+        font-size: 30px;
+        background-color: transparent;
 
+        /* 🖼️ Background image */
+        background-image: url("../asset/images/playerbg.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
 
-  /* 🖼️ Background image */
-  background-image: url("../asset/images/playerbg.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-     
-      #name{
+      #name {
         display: flex;
         justify-content: center;
         align-items: center;
         color: white;
         font-family: Helvetica;
         font-size: 80px;
+ 
       }
     </style>
   </head>
@@ -265,34 +264,36 @@
       <div id="nameDiv"></div>
     </div>
 
-    <div id="winner" style="display: none;">
+    <div id="winner" style="display: none">
       <div class="congrats">
-        <img src="../asset/images/congrats.png" alt="" width="1200px" />
+        <img src="../asset/images/congrats.png" alt="" width="1000px" />
       </div>
-      <div class="nameContainerr">
+      <div class="nameContainerr" >
         <h2 id="name" style="padding-top: 10px">Yamuna</h2>
       </div>
     </div>
     <script type="text/javascript">
       const socket1 = io();
       const socket2 = io("http://192.168.1.161:3000");
-      
+
       function createGaugeDisplay(containerId) {
         const container = document.getElementById(containerId);
-        container.className = 'gauge-container';
-        
-        const percentage = document.createElement('div');
-        percentage.className = 'gauge-percentage';
-        percentage.textContent = '0%';
-        percentage.id = containerId + '-value';
-        
+        container.className = "gauge-container";
+
+        const percentage = document.createElement("div");
+        percentage.className = "gauge-percentage";
+        percentage.textContent = "0%";
+        percentage.id = containerId + "-value";
+
         container.appendChild(percentage);
       }
 
       function updateGaugeValue(containerId, value) {
-        const percentageElement = document.getElementById(containerId + '-value');
+        const percentageElement = document.getElementById(
+          containerId + "-value"
+        );
         if (percentageElement) {
-          percentageElement.textContent = Math.round(value) + '%';
+          percentageElement.textContent = Math.round(value) + "%";
         }
       }
 
@@ -379,8 +380,8 @@
             playerName = playerTwo.innerText;
             socket1.emit("winnerName", playerName);
             socket2.emit("stop");
-            socket1.emit("stop"); 
-            console.log(playerName,"player 2 is winner");
+            socket1.emit("stop");
+            console.log(playerName, "player 2 is winner");
           }
 
           let message = `${playerName} `;
@@ -394,8 +395,8 @@
       });
 
       socket2.on("winnerTwo", () => {
-        console.log("winner two reciveddddddddddddddddd ")
-        console.log("got from another client")
+        console.log("winner two reciveddddddddddddddddd ");
+        console.log("got from another client");
         handleWinner(2);
       });
 
