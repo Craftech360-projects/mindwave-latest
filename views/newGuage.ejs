@@ -165,15 +165,16 @@
         justify-content: center;
         align-items: center;
         font-size: 2rem;
+        /* transform: translateY(-10px); */
       }
 
       #winner h1 {
-        margin-top: 10px;
+        /* margin-top: 10px; */
       }
 
       .won-name {
         position: absolute;
-        top: 21.8%;
+        /* top: 21.8%; */
       }
 
       .congrats {
@@ -244,34 +245,71 @@
         background-position: center;
         background-repeat: no-repeat;
       }
+#name {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-family: Helvetica, sans-serif;
+  font-size: 40px;
+  height: 120px; /* adjust based on your image */
+  width: 500px;  /* adjust width as needed */
+  background-image: url("../asset/images/winnerbg.png");
+  background-size: contain; /* Keeps full image visible */
+  background-repeat: no-repeat;
+  background-position: center;
+  border-radius: 20px;
+  text-align: center;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+}
 
-      #name {
+
+      /* Video Container Styles */
+      #videoContainer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
         display: flex;
         justify-content: center;
         align-items: center;
-        color: white;
-        font-family: Helvetica;
-        font-size: 80px;
- 
+        z-index: 9999;
+      }
+
+      #defaultVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
     </style>
   </head>
 
   <body style="padding: 0; margin: 0; overflow: hidden">
-    <div class="nameDemo" >
-      <div id="demoWidget"></div>
+    <!-- Video Container (shown initially) -->
+    <div id="videoContainer" >
+      <video id="defaultVideo" autoplay loop muted playsinline>
+        <source src="../asset/videos/default.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
 
+    <!-- Game Content (hidden initially) -->
+    <div class="nameDemo" style="display: none;">
+      <div id="demoWidget"></div>
       <div id="nameDiv"></div>
     </div>
 
-    <div id="winner" style="display: none">
+    <div id="winner"style="display: none" >
       <div class="congrats">
-        <img src="../asset/images/congrats.png" alt="" width="1000px" />
+        <img src="../asset/images/congrats.png" alt="" width="700px" />
       </div>
-      <div class="nameContainerr" >
-        <h2 id="name" style="padding-top: 10px">Yamuna</h2>
+      <div class="nameContainerr">
+        <h2 id="name" >Yamuna</h2>
       </div>
     </div>
+
     <script type="text/javascript">
       const socket1 = io();
       const socket2 = io("http://192.168.1.161:3000");
@@ -364,6 +402,8 @@
       const winnerName = document.getElementById("name");
       const playerOne = document.getElementById("player1");
       const playerTwo = document.getElementById("player2");
+      const videoContainer = document.getElementById("videoContainer");
+      const nameDemo = document.querySelector(".nameDemo");
 
       let hasWinnerBeenCalled = false;
 
@@ -405,12 +445,17 @@
         document.getElementById("gaugeContainer1").style.display = "none";
         nameDiv.style.display = "none";
         demoWidget.style.display = "none";
+        nameDemo.style.display = "none";
         winnerDiv.style.display = "flex";
         winnerName.innerHTML = value;
         goBack();
       }
 
       socket1.on("getUser", (e) => {
+        // Hide video and show game screen
+        videoContainer.style.display = "none";
+        nameDemo.style.display = "flex";
+
         playerOne.innerText = e.playerone;
         playerTwo.innerText = e.playertwo;
 
