@@ -132,49 +132,55 @@ fs.readFile('selectedPort.json', (err, data) => {
     });
 
     //Reading data from MindWave headset, calculating speed based coming data and writing speed to serial port
-    client.on("data", function (data) {
-      var myobj = data;
-      console.log(myobj.eSense.attention);
-      var data = myobj.eSense.attention;
-      io.emit("meditation", data);
+client.on("data", function (data) {
+  var myobj = data;
+  console.log(myobj.eSense.attention);
+  var attention = myobj.eSense.attention;
+  io.emit("meditation", attention);
 
-      if (data > 0 && data <= 20) {
-        usbport.write("a", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "a");
-        });
+  // NEW: If data is 0–5, write "e"
+  if (attention >= 0 && attention <= 5) {
+    usbport.write("e", function (err) {
+      if (err) {
+        return console.log("Error on write: ", err.message);
       }
-
-      if (data > 20 && data <= 40) {
-        usbport.write("b", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "b");
-        });
-      }
-
-      if (data > 40 && data <= 70) {
-        usbport.write("c", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "c");
-        });
-      }
-
-      if (data > 70) {
-        usbport.write("d", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as " + "d");
-        });
-      }
-
+      console.log("message written as " + "e");
     });
+  } 
+  else if (attention > 5 && attention <= 20) {
+    usbport.write("a", function (err) {
+      if (err) {
+        return console.log("Error on write: ", err.message);
+      }
+      console.log("message written as " + "a");
+    });
+  } 
+  else if (attention > 20 && attention <= 40) {
+    usbport.write("b", function (err) {
+      if (err) {
+        return console.log("Error on write: ", err.message);
+      }
+      console.log("message written as " + "b");
+    });
+  } 
+  else if (attention > 40 && attention <= 70) {
+    usbport.write("c", function (err) {
+      if (err) {
+        return console.log("Error on write: ", err.message);
+      }
+      console.log("message written as " + "c");
+    });
+  } 
+  else if (attention > 70) {
+    usbport.write("d", function (err) {
+      if (err) {
+        return console.log("Error on write: ", err.message);
+      }
+      console.log("message written as " + "d");
+    });
+  }
+});
+
 
   }
 })
