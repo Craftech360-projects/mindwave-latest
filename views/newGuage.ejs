@@ -446,11 +446,10 @@
 
       let hasWinnerBeenCalled = false;
 
-      // Sends 'f' to BOTH ESP32s: this (master) laptop's board via socket1 and
-      // the client laptop's board via socket2.
+      // Sends 'f' to BOTH ESP32s: the master server stops its own board and
+      // relays "stop" to the client laptop's server (see relayToPeer in app.js).
       function stopBothEsp() {
         socket1.emit("stop");
-        socket2.emit("stop");
       }
 
       function handleWinner(playerNumber) {

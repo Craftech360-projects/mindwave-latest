@@ -216,7 +216,8 @@
           playerone: playerOne.value,
           playertwo: playerTwo.value,
         };
-        socketTwo.emit("start");
+        // The master server writes 's' to its ESP32 and relays "start" to the
+        // client laptop's server itself (see relayToPeer in app.js).
         socket.emit("start", data);
         playerOne.value = "";
         playerTwo.value = "";

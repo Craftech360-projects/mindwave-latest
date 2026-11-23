@@ -82,6 +82,54 @@ if (client && client.connect) {
 }
 
 let usbport = null;
+
+// --- Master -> client laptop relay -------------------------------------------
+// The master laptop's server forwards "start"/"stop" to the client laptop's
+// server so the client's ESP32 also gets 's'/'f'. Override with PEER_URL env.
+// If PEER_URL points at this machine itself (i.e. we ARE the client laptop),
+// the relay is disabled automatically.
+const PEER_URL = process.env.PEER_URL || "http://192.168.0.233:3000";
+let peer = null;
+
+function isOwnAddress(url) {
+  try {
+    const host = new URL(url).hostname;
+    if (host === "localhost" || host === "127.0.0.1") return true;
+    const ifaces = require("os").networkInterfaces();
+    return Object.values(ifaces)
+      .flat()
+      .some((i) => i && i.address === host);
+  } catch (e) {
+    return false;
+  }
+}
+
+if (isOwnAddress(PEER_URL)) {
+  console.log(`Peer relay disabled (${PEER_URL} is this machine - client mode).`);
+} else {
+  try {
+    peer = require("socket.io-client")(PEER_URL, { reconnection: true });
+    peer.on("connect", () => console.log(`Connected to client laptop at ${PEER_URL}`));
+    peer.on("disconnect", () => console.warn(`Disconnected from client laptop ${PEER_URL}`));
+    peer.on("connect_error", (err) =>
+      console.warn(`Cannot reach client laptop ${PEER_URL}:`, err.message || err)
+    );
+  } catch (e) {
+    console.warn("socket.io-client unavailable - peer relay disabled.");
+  }
+}
+
+// Forward an event to the client laptop. Marked fromPeer so it is never
+// relayed back (prevents loops if both laptops run this code).
+function relayToPeer(event, payload) {
+  if (!peer) return;
+  if (!peer.connected) {
+    console.error(`Client laptop NOT connected - "${event}" was not sent to ${PEER_URL}`);
+    return;
+  }
+  peer.emit(event, Object.assign({}, payload, { fromPeer: true }));
+  console.log(`Relayed "${event}" to client laptop ${PEER_URL}`);
+}
 let parser = null;
 
 // True only while a round is actually running. Used so that MindWave attention
@@ -138,16 +186,19 @@ io.on("connection", function (socket) {
   console.log("conncted");
 
   //Writing 's' to serial port to start and send name to main screen.
+  //On the master this is also forwarded to the client laptop.
   socket.on("start", (e) => {
     gameRunning = true;
-    writeToEsp("s", "start");
+    writeToEsp("s", e && e.fromPeer ? "start - from master" : "start");
     io.emit("getUser", e);
+    if (!(e && e.fromPeer)) relayToPeer("start", e);
   });
 
-  //Writing 'f' to serial port to stop this laptop's ESP32.
-  socket.on("stop", () => {
+  //Writing 'f' to serial port to stop this laptop's ESP32 (and the client's).
+  socket.on("stop", (e) => {
     gameRunning = false;
-    writeToEsp("f", "stop");
+    writeToEsp("f", e && e.fromPeer ? "stop - from master" : "stop");
+    if (!(e && e.fromPeer)) relayToPeer("stop", e);
   });
 
   // Winner name wil be saved DB.
