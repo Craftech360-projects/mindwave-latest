@@ -7,9 +7,32 @@ const express = require("express"),
   bodyParser = require("body-parser"),
   thinkgear = require("node-thinkgear-sockets"),
   client = thinkgear.createClient({ enableRawOutput: false }),
-  SerialPort = require("serialport"),
+  { SerialPort } = require("serialport"),
+  { ReadlineParser } = require("@serialport/parser-readline"),
   sqlite3 = require("sqlite3"),
   fs = require("fs");
+
+let usbport = null;
+let parser = null;
+
+// True only while a round is actually running. Used so that MindWave attention
+// values are not written to the ESP32 after the game has finished (otherwise the
+// speed chars 'a'-'e' keep streaming and override the 'f' stop command).
+let gameRunning = false;
+
+// Writes a single command character to this laptop's ESP32 over serial.
+function writeToEsp(cmd, label) {
+  if (!usbport || !usbport.isOpen) {
+    console.error(`Serial port not ready - cannot send "${cmd}"`);
+    return;
+  }
+  usbport.write(cmd, function (err) {
+    if (err) {
+      return console.log("Error on write: ", err.message);
+    }
+    console.log(`message written as ${cmd}${label ? " (" + label + ")" : ""}`);
+  });
+}
 
 const db = new sqlite3.Database("winnerList.db", (err) => {
   if (err) {
@@ -42,25 +65,17 @@ server.listen(port, () => console.log("Server listening on " + port));
 io.on("connection", function (socket) {
   console.log("conncted");
 
-  //Writing 'S' to serial port to start and send name to main screen.
+  //Writing 's' to serial port to start and send name to main screen.
   socket.on("start", (e) => {
-    usbport.write("s", function (err) {
-      if (err) {
-        return console.log("Error on write: ", err.message);
-      }
-      console.log("message written as " + "s");
-      io.emit("getUser", e);
-    });
+    gameRunning = true;
+    writeToEsp("s", "start");
+    io.emit("getUser", e);
   });
 
-  //Writing 'F' to serial port to stop.
-  socket.on("stop", (e) => {
-    usbport.write("f", function (err) {
-      if (err) {
-        return console.log("Error on write: ", err.message);
-      }
-      console.log("message written as " + "f");
-    });
+  //Writing 'f' to serial port to stop this laptop's ESP32.
+  socket.on("stop", () => {
+    gameRunning = false;
+    writeToEsp("f", "stop");
   });
 
   // Winner name wil be saved DB.
@@ -110,15 +125,33 @@ fs.readFile("selectedPort.json", (err, data) => {
     io.emit("selectedPortData", selectedPort);
 
     //Initializing Serial Port
-    Readline = SerialPort.parsers.Readline;
-    usbport = new SerialPort(selectedPort, {
+    usbport = new SerialPort({
+      path: selectedPort,
       baudRate: 115200,
     });
-    parser = usbport.pipe(new Readline());
+    usbport.on("error", (err) => {
+      console.error("Serial port error:", err.message);
+    });
+    parser = usbport.pipe(new ReadlineParser({ delimiter: "\n" }));
 
-    //Reading winner from serial port
+    //Reading winner from serial port.
+    //The ESP32 that finishes first sends "1" - that laptop's player is the winner.
     parser.on("data", function (data) {
-      if (data == 1) {
+      const msg = String(data).trim();
+      if (msg === "") return;
+      console.log("ESP32 ->", JSON.stringify(msg));
+
+      if (msg === "1") {
+        console.log("Winner signal (1) received from this laptop's ESP32");
+
+        // Stop our own board immediately, without waiting for the browser
+        // round-trip, and stop streaming attention values to it.
+        gameRunning = false;
+        writeToEsp("f", "stop - local winner");
+
+        // Tell every connected page. "winner" is the event the game screen uses;
+        // "winnerOne" is kept so an older game screen still works.
+        io.emit("winner");
         io.emit("winnerOne");
       }
     });
@@ -130,38 +163,32 @@ fs.readFile("selectedPort.json", (err, data) => {
 
       var attention = myobj.eSense.attention;
       console.log("Attention:", attention);
+
+      // Always emit so the form page keeps showing the headset as connected.
       io.emit("meditation", attention);
 
+      // But only drive the motor while a round is running, otherwise these
+      // writes would immediately undo the 'f' stop command.
+      if (!gameRunning) return;
+
       if (attention >= 0 && attention < 5) {
-        usbport.write("e", function (err) {
-          if (err) {
-            return console.log("Error on write: ", err.message);
-          }
-          console.log("message written as e");
-        });
-      } else if (attention > 5 && attention <= 20) {
-        usbport.write("a", function (err) {
-          if (err) return console.log("Error on write: ", err.message);
-          console.log("message written as a");
-        });
+        writeToEsp("e");
+      } else if (attention >= 5 && attention <= 20) {
+        writeToEsp("a");
       } else if (attention > 20 && attention <= 40) {
-        usbport.write("b", function (err) {
-          if (err) return console.log("Error on write: ", err.message);
-          console.log("message written as b");
-        });
+        writeToEsp("b");
       } else if (attention > 40 && attention <= 70) {
-        usbport.write("c", function (err) {
-          if (err) return console.log("Error on write: ", err.message);
-          console.log("message written as c");
-        });
+        writeToEsp("c");
       } else if (attention > 70) {
-        usbport.write("d", function (err) {
-          if (err) return console.log("Error on write: ", err.message);
-          console.log("message written as d");
-        });
+        writeToEsp("d");
       }
     });
   }
 });
 
 client.connect();
+if (client.client) {
+  client.client.on("error", (err) => {
+    console.error("ThinkGear connection error:", err.message);
+  });
+}
