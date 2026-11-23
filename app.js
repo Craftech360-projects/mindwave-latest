@@ -5,12 +5,81 @@ const express = require("express"),
   port = 3000,
   path = require("path"),
   bodyParser = require("body-parser"),
-  thinkgear = require("node-thinkgear-sockets"),
-  client = thinkgear.createClient({ enableRawOutput: false }),
-  { SerialPort } = require("serialport"),
-  { ReadlineParser } = require("@serialport/parser-readline"),
-  sqlite3 = require("sqlite3"),
   fs = require("fs");
+
+// --- Optional native/hardware modules. The web UI still runs if the MindWave
+// --- headset, serial device, or compiled addons (sqlite3/serialport/thinkgear)
+// --- are missing; each falls back to a harmless stub.
+let thinkgear, SerialPort, ReadlineParser, sqlite3;
+
+try {
+  thinkgear = require("node-thinkgear-sockets");
+} catch (e) {
+  console.warn("node-thinkgear-sockets unavailable - using stub (no headset).");
+  thinkgear = {
+    createClient: () => ({
+      on: () => {},
+      connect: () => console.warn("ThinkGear stub: no headset connected."),
+    }),
+  };
+}
+
+// serialport v12: named exports, and the readline parser is a separate package.
+try {
+  ({ SerialPort } = require("serialport"));
+  ({ ReadlineParser } = require("@serialport/parser-readline"));
+} catch (e) {
+  console.warn("serialport unavailable - using stub (no COM device).");
+  SerialPort = class {
+    constructor() {
+      this.isOpen = false;
+      this.write = (d, cb) => cb && cb();
+      this.pipe = () => ({ on: () => {} });
+      this.on = () => {};
+    }
+    static list() {
+      return Promise.resolve([]);
+    }
+  };
+  ReadlineParser = class {};
+}
+
+try {
+  sqlite3 = require("sqlite3");
+} catch (e) {
+  console.warn("sqlite3 unavailable - using in-memory stub.");
+  sqlite3 = {
+    Database: class {
+      constructor(file, cb) {
+        cb && cb(null);
+      }
+      run(sql, ...args) {
+        const cb = args[args.length - 1];
+        if (typeof cb === "function") cb.call({ lastID: 0 }, null);
+      }
+    },
+  };
+}
+
+const client = thinkgear.createClient({ enableRawOutput: false });
+
+// The MindWave headset talks to a local ThinkGear Connector (TCP :13854). When
+// it isn't running (no hardware), net.connect emits an unhandled 'error' and
+// crashes the process. Guard that so the web UI keeps running without a headset.
+if (client && client.connect) {
+  const originalConnect = client.connect.bind(client);
+  client.connect = function () {
+    originalConnect();
+    if (client.client) {
+      client.client.on("error", (err) => {
+        console.warn(
+          "ThinkGear connector not reachable - continuing without headset:",
+          err.code || err.message
+        );
+      });
+    }
+  };
+}
 
 let usbport = null;
 let parser = null;
@@ -47,6 +116,9 @@ db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use("/asset", express.static(path.join(__dirname, "asset")));
+
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 app.get("/", function (req, res) {
   res.render("newGuage.ejs");
@@ -186,9 +258,5 @@ fs.readFile("selectedPort.json", (err, data) => {
   }
 });
 
+// The error handler is attached inside the guarded connect() wrapper above.
 client.connect();
-if (client.client) {
-  client.client.on("error", (err) => {
-    console.error("ThinkGear connection error:", err.message);
-  });
-}
