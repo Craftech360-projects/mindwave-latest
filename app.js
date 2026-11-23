@@ -108,8 +108,18 @@ if (isOwnAddress(PEER_URL)) {
   console.log(`Peer relay disabled (${PEER_URL} is this machine - client mode).`);
 } else {
   try {
-    peer = require("socket.io-client")(PEER_URL, { reconnection: true });
-    peer.on("connect", () => console.log(`Connected to client laptop at ${PEER_URL}`));
+    // websocket only: skips the slow HTTP long-polling phase socket.io v2
+    // otherwise starts with, so each emit goes out immediately on an open TCP
+    // connection.
+    peer = require("socket.io-client")(PEER_URL, {
+      reconnection: true,
+      reconnectionDelay: 500,
+      transports: ["websocket"],
+    });
+    peer.on("connect", () => {
+      console.log(`Connected to client laptop at ${PEER_URL}`);
+      measurePeerLatency();
+    });
     peer.on("disconnect", () => console.warn(`Disconnected from client laptop ${PEER_URL}`));
     peer.on("connect_error", (err) =>
       console.warn(`Cannot reach client laptop ${PEER_URL}:`, err.message || err)
@@ -117,6 +127,28 @@ if (isOwnAddress(PEER_URL)) {
   } catch (e) {
     console.warn("socket.io-client unavailable - peer relay disabled.");
   }
+}
+
+// Round-trip time to the client laptop, smoothed. Used to delay this laptop's
+// own 's' by half the trip so both ESP32s get it at about the same moment.
+// Needs the client to run this code too (it answers "peerPing"); if it runs
+// older code there is no answer and no compensation is applied.
+let peerRtt = 0;
+const MAX_COMPENSATION_MS = 300;
+
+function measurePeerLatency() {
+  if (!peer || !peer.connected) return;
+  const t0 = Date.now();
+  peer.emit("peerPing", t0, () => {
+    const rtt = Date.now() - t0;
+    peerRtt = peerRtt ? Math.round(peerRtt * 0.7 + rtt * 0.3) : rtt;
+  });
+}
+setInterval(measurePeerLatency, 2000);
+
+function localDelayMs() {
+  if (!peer || !peer.connected) return 0;
+  return Math.min(Math.round(peerRtt / 2), MAX_COMPENSATION_MS);
 }
 
 // Forward an event to the client laptop. Marked fromPeer so it is never
@@ -128,7 +160,7 @@ function relayToPeer(event, payload) {
     return;
   }
   peer.emit(event, Object.assign({}, payload, { fromPeer: true }));
-  console.log(`Relayed "${event}" to client laptop ${PEER_URL}`);
+  console.log(`Relayed "${event}" to client laptop (rtt ~${peerRtt} ms)`);
 }
 let parser = null;
 
@@ -187,18 +219,35 @@ io.on("connection", function (socket) {
 
   //Writing 's' to serial port to start and send name to main screen.
   //On the master this is also forwarded to the client laptop.
+  //The client laptop is sent "start" FIRST, then this laptop's own 's' is
+  //written after half the measured round-trip so both boards start together.
   socket.on("start", (e) => {
-    gameRunning = true;
-    writeToEsp("s", e && e.fromPeer ? "start - from master" : "start");
+    const fromPeer = !!(e && e.fromPeer);
+    if (fromPeer) {
+      gameRunning = true;
+      writeToEsp("s", "start - from master");
+    } else {
+      relayToPeer("start", e);
+      const delay = localDelayMs();
+      setTimeout(() => {
+        gameRunning = true;
+        writeToEsp("s", delay ? `start, synced +${delay} ms` : "start");
+      }, delay);
+    }
     io.emit("getUser", e);
-    if (!(e && e.fromPeer)) relayToPeer("start", e);
   });
 
   //Writing 'f' to serial port to stop this laptop's ESP32 (and the client's).
   socket.on("stop", (e) => {
     gameRunning = false;
-    writeToEsp("f", e && e.fromPeer ? "stop - from master" : "stop");
-    if (!(e && e.fromPeer)) relayToPeer("stop", e);
+    const fromPeer = !!(e && e.fromPeer);
+    if (!fromPeer) relayToPeer("stop", e);
+    writeToEsp("f", fromPeer ? "stop - from master" : "stop");
+  });
+
+  //Latency probe from the master laptop - just echo back immediately.
+  socket.on("peerPing", (t, ack) => {
+    if (typeof ack === "function") ack(t);
   });
 
   // Winner name wil be saved DB.

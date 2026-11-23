@@ -10,7 +10,9 @@ echo.
 where node >nul 2>nul
 if errorlevel 1 goto nonode
 
-if exist "node_modules\express\package.json" goto depsok
+rem serialport v12 ships its Windows driver in @serialport/bindings-cpp. If an
+rem older install (serialport v7, no compiled driver) is present, reinstall.
+if exist "node_modules\express\package.json" if exist "node_modules\@serialport\bindings-cpp\package.json" goto depsok
 
 echo Installing dependencies. This may take a minute...
 echo.
