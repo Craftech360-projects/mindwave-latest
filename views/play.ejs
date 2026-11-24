@@ -211,6 +211,11 @@
         settled = true;
         racing = false;
 
+        // Stop BOTH ESP32s: the master writes 'f' to its board and relays
+        // "stop" to the client laptop. This covers the case where the client
+        // laptop's ESP32 won, since that server cannot reach the master.
+        socket1.emit("stop");
+
         var name = ladders[player].name.textContent;
         var seconds = raceStartedAt
           ? Math.round((Date.now() - raceStartedAt) / 1000)

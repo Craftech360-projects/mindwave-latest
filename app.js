@@ -407,6 +407,9 @@ fs.readFile("selectedPort.json", (err, data) => {
         // round-trip, and stop streaming attention values to it.
         gameRunning = false;
         writeToEsp("f", "stop - local winner");
+        // On the master this also stops the client laptop's ESP32 right away.
+        // (relayToPeer is a no-op on the client laptop, which has no peer.)
+        relayToPeer("stop", {});
 
         // Tell every connected page. "winner" is the event the game screen uses;
         // "winnerOne" is kept so an older game screen still works.
