@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Leaderboard</title>
+    <link rel="stylesheet" href="/asset/css/avishkar.css" />
+    <style>
+      /* Figma: B / 06 - Leaderboard (380:457), stage 1920x1080.
+         This frame places the background photo at the origin and the logo
+         31px further in than the other five - both are as drawn. */
+      .stage { --bg-x: 0px; --bg-y: 0px; --logo-x: 102px; --logo-y: 68px; }
+
+      .lb-title   { left: 763px; top: 174px; width: 406px;
+                    font-size: 56px; line-height: 61.2px; font-weight: 700; }
+
+      /* --- Podium ------------------------------------------------------------
+         First place is a wider, lighter card with a 2px edge; second and third
+         are narrower, darker, and edged at 60% of the rail colour. */
+      .card       { position: absolute; top: 280px; height: 306px; }
+      .card--1    { left: 160px;  width: 592px;
+                    background: var(--lb-first); border: 2px solid var(--rail); }
+      .card--2    { left: 776px;  width: 480px;
+                    background: var(--lb-card); border: 1px solid var(--hair-60); }
+      .card--3    { left: 1280px; width: 480px;
+                    background: var(--lb-card); border: 1px solid var(--hair-60); }
+
+      .c-rank     { font-size: 58px; line-height: 63.8px; font-weight: 700;
+                    color: var(--rank); }
+      .c-place    { font-size: 20px; line-height: 22px; font-weight: 700;
+                    color: var(--rank-soft); }
+      .c-name     { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+      .c-time     { font-size: 54px; line-height: 59.4px; font-weight: 700; }
+
+      /* Card one runs on its own scale and sits a pixel lower than the other
+         two; the file is explicit about it, so the coordinates are per card. */
+      .c1-rank  { left: 194px;  top: 306px; }
+      .c1-place { left: 279px;  top: 327px; }
+      .c1-name  { left: 194px;  top: 388px; width: 524px;
+                  font-size: 56px; line-height: 61.6px; }
+      .c1-time  { left: 194px;  top: 468px; }
+
+      .c2-rank  { left: 809px;  top: 305px; }
+      .c2-place { left: 902px;  top: 326px; }
+      .c2-name  { left: 809px;  top: 387px; width: 414px;
+                  font-size: 48px; line-height: 52.8px; }
+      .c2-time  { left: 809px;  top: 458px; }
+
+      .c3-rank  { left: 1313px; top: 305px; }
+      .c3-place { left: 1408px; top: 326px; }
+      .c3-name  { left: 1313px; top: 387px; width: 414px;
+                  font-size: 48px; line-height: 52.8px; }
+      .c3-time  { left: 1313px; top: 458px; }
+
+      /* --- Table -------------------------------------------------------------
+         Header at y646, then rows on a 76px pitch from y690, each closed by a
+         1px rule at 30% of the rail colour. */
+      .th         { top: 646px; font-size: 24px; line-height: 26.4px;
+                    font-weight: 500; color: var(--head); }
+      .th--rank   { left: 188px;  width: 200px; }
+      .th--name   { left: 388px;  width: 1000px; }
+      .th--time   { left: 1388px; width: 344px; text-align: right; }
+
+      .row        { position: absolute; left: 160px; width: 1600px; height: 76px;
+                    background: var(--lb-row); border-bottom: 1px solid var(--hair-30); }
+      .r-rank     { left: 28px;   top: 21px; width: 200px;
+                    font-size: 30px; line-height: 33px; font-weight: 700;
+                    color: var(--rank); }
+      .r-name     { left: 228px;  top: 18px; width: 1000px;
+                    font-size: 36px; line-height: 39.6px; font-weight: 500;
+                    overflow: hidden; text-overflow: ellipsis; }
+      .r-time     { left: 1228px; top: 18px; width: 344px; text-align: right;
+                    font-size: 36px; line-height: 39.6px; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <main class="stage stage--wall">
+      <img class="bg" src="/asset/images/avishkar/bg.png" alt="" />
+      <div class="bg-veil"></div>
+      <img class="logo" src="/asset/images/avishkar/logo.png" alt="Micron AVISHKAR" />
+
+      <h1 class="t lb-title">LEADERBOARD</h1>
+
+      <%
+        // The frame draws three podium cards and four table rows. Short lists
+        // keep the furniture and show empty slots rather than re-flowing, so
+        // the board looks the same on a quiet morning as on a busy afternoon.
+        var places = ["First Place", "Second Place", "Third Place"];
+        var podium = [0, 1, 2].map(function (i) { return rows[i] || null; });
+        var rest = rows.slice(3, 7);
+      %>
+
+      <% podium.forEach(function (entry, i) { var n = i + 1; %>
+        <div class="card card--<%= n %>"></div>
+        <p class="t c-rank is-inter c<%= n %>-rank">0<%= n %></p>
+        <p class="t c-place is-inter c<%= n %>-place"><%= places[i] %></p>
+        <p class="t c-name c<%= n %>-name"><%= entry ? entry.name : "—" %></p>
+        <p class="t c-time c<%= n %>-time"><%= entry ? entry.time : "--:--" %></p>
+      <% }); %>
+
+      <p class="t th is-inter th--rank">RANK</p>
+      <p class="t th is-inter th--name">PLAYER NAME</p>
+      <p class="t th is-inter th--time">TIME / MM:SS</p>
+
+      <% for (var i = 0; i < 4; i++) {
+           var entry = rest[i];
+           var rank = i + 4;
+      %>
+        <div class="row" style="top: <%= 690 + i * 76 %>px">
+          <p class="t r-rank">0<%= rank %></p>
+          <p class="t r-name"><%= entry ? entry.name : "—" %></p>
+          <p class="t r-time"><%= entry ? entry.time : "--:--" %></p>
+        </div>
+      <% } %>
+    </main>
+
+    <script src="/asset/js/stage.js"></script>
+  </body>
+</html>

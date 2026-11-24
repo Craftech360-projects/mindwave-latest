@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Player information</title>
+    <link rel="stylesheet" href="/asset/css/avishkar.css" />
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      /* Figma: B / 01 - Player information (node 380:178), stage 834x1194.
+         Every coordinate below is the node's own, relative to the frame. */
+      .stage { --bg-x: -671px; --bg-y: -15px; }
+
+      /* 380:228 - "PLAYER / INFO" */
+      .heading   { left: 72px;  top: 290px; width: 353px;
+                   font-size: 94px; line-height: 103.4px; font-weight: 700; }
+
+      /* 380:231 / 380:233 - "B / Name input", 568x100, fill #0d0417.
+         The underline is 3px, measured on the plate at y675-677 of a box whose
+         bottom edge is 678 - it sits inside the box, not under it. */
+      .field     { position: absolute; left: 72px; width: 568px; height: 100px;
+                   background: var(--field); border-bottom: 3px solid var(--rail); }
+      .field--1  { top: 578px; }
+      .field--2  { top: 708px; }
+
+      /* The placeholder line is its own text node at (96,610) / (96,740), so the
+         input is positioned to that line box rather than padded inside the
+         field - padding would centre it and land 17px low. */
+      .name      { position: absolute; left: 96px; width: 520px; height: 33px;
+                   font-family: inherit; font-size: 30px; line-height: 33px;
+                   font-weight: 400; color: var(--ink);
+                   background: transparent; border: 0; outline: none; padding: 0;
+                   caret-color: var(--rail); text-overflow: ellipsis; }
+      .name--1   { top: 610px; }
+      .name--2   { top: 740px; }
+      .name::placeholder { color: var(--ink); opacity: 1; }
+
+      /* Headset lamp, one per player. NOT in the Figma frame - the previous
+         registration page had it and it is the only cue that a headset is
+         actually streaming, so it is parked in the empty column to the right
+         of the fields where it displaces nothing the design draws. */
+      .lamp      { position: absolute; left: 672px; width: 16px; height: 16px;
+                   border-radius: 50%; background: var(--violet-dim);
+                   border: 2px solid var(--hair-60);
+                   transition: background .2s ease, border-color .2s ease; }
+      .lamp--1   { top: 620px; }
+      .lamp--2   { top: 750px; }
+      .lamp.is-live { background: var(--live-ok); border-color: var(--live-ok); }
+
+      /* 380:235 - "B / Launch action", 571x96. Narrower than the 690 column the
+         other two tablet screens use, and labelled "Restart" rather than
+         "Start": both are as drawn in the file. */
+      .go        { left: 72px; top: 900px; width: 571px; height: 96px; }
+      .go .btn-label { left: 32px; top: 30px; }
+      .go .btn-arrow { left: 493px; top: 22px; }
+    </style>
+  </head>
+  <body>
+    <main class="stage stage--tablet">
+      <img class="bg" src="/asset/images/avishkar/bg.png" alt="" />
+      <div class="bg-veil"></div>
+      <img class="logo" src="/asset/images/avishkar/logo.png" alt="Micron AVISHKAR" />
+
+      <h1 class="t heading">PLAYER<br />INFO</h1>
+
+      <div class="field field--1"></div>
+      <input class="name name--1" id="playerone" type="text" autocomplete="off"
+             spellcheck="false" placeholder="Player 1 name" />
+
+      <div class="field field--2"></div>
+      <input class="name name--2" id="playertwo" type="text" autocomplete="off"
+             spellcheck="false" placeholder="Player 2 name" />
+
+      <div class="lamp lamp--1" id="lamp1" title="Player 1 headset"></div>
+      <div class="lamp lamp--2" id="lamp2" title="Player 2 headset"></div>
+
+      <button class="btn btn-go go" id="submit" type="button">
+        <span class="btn-label">Restart</span>
+        <span class="btn-arrow">&#8594;</span>
+      </button>
+    </main>
+
+    <script src="/asset/js/stage.js"></script>
+    <script>
+      // Starting a race only needs this machine: the server writes 's' to its
+      // own ESP32 and relays "start" to the peer itself (relayToPeer in app.js).
+      // Watching player 02's headset does need the peer, because that headset
+      // reports there. Blank peer = no second laptop, so lamp 2 stays dark.
+      var socket1 = io();
+      var peerUrl = "<%= peerUrl %>";
+      var socket2 = peerUrl ? io(peerUrl) : { on: function () {} };
+
+      var playerOne = document.getElementById("playerone");
+      var playerTwo = document.getElementById("playertwo");
+
+      document.getElementById("submit").addEventListener("click", function () {
+        socket1.emit("start", {
+          playerone: playerOne.value.trim(),
+          playertwo: playerTwo.value.trim(),
+        });
+        playerOne.value = "";
+        playerTwo.value = "";
+      });
+
+      // A lamp lights on any attention reading and goes out by itself after
+      // three quiet seconds. The old page only cleared it on an explicit zero,
+      // which left a green light showing on a headset that had been unplugged.
+      function watchHeadset(el) {
+        var idle = null;
+        return function (value) {
+          if (!(value > 0)) {
+            el.classList.remove("is-live");
+            return;
+          }
+          el.classList.add("is-live");
+          clearTimeout(idle);
+          idle = setTimeout(function () {
+            el.classList.remove("is-live");
+          }, 3000);
+        };
+      }
+
+      socket1.on("meditation", watchHeadset(document.getElementById("lamp1")));
+      socket2.on("meditation", watchHeadset(document.getElementById("lamp2")));
+    </script>
+  </body>
+</html>

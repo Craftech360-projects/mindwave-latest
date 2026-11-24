@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Race control</title>
+    <link rel="stylesheet" href="/asset/css/avishkar.css" />
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      /* Figma: B / 02 - Start race (380:236) and B / 03 - Restart (380:291).
+         Both are the same 834x1194 tablet stage with the same background, so
+         they are one page in two states rather than two documents. */
+      .stage { --bg-x: -671px; --bg-y: -15px; }
+
+      .state { display: none; }
+      .state.is-on { display: block; }
+
+      /* --- 02 - Start race -------------------------------------------------- */
+      .s2-heading { left: 72px; top: 314px; width: 344px;
+                    font-size: 112px; line-height: 123.2px; font-weight: 700; }
+      .s2-sub     { left: 72px; top: 578px; width: 322px;
+                    font-size: 28px; line-height: 30.8px; font-weight: 400; }
+
+      /* 380:289 - the only primary button in the file carrying a 2px edge. */
+      .s2-go      { left: 72px; top: 730px; width: 690px; height: 138px;
+                    border: 2px solid var(--rail); }
+      .s2-go .btn-label { left: 34px; top: 51px; }
+      .s2-go .btn-arrow { left: 610px; top: 43px; }
+
+      /* 380:290 - "B / Reset action", 1px edge at 66% of the rail colour. */
+      .s2-reset   { left: 72px; top: 890px; width: 690px; height: 92px;
+                    border: 1px solid var(--hair-66); }
+      .s2-reset .btn-label { left: 33px; top: 28px; }
+
+      /* --- 03 - Restart ----------------------------------------------------- */
+      .s3-heading { left: 72px; top: 356px; width: 376px;
+                    font-size: 112px; line-height: 123.2px; font-weight: 700; }
+      .s3-sub     { left: 72px; top: 622px; width: 397px;
+                    font-size: 28px; line-height: 30.8px; font-weight: 400; }
+      .s3-go      { left: 72px; top: 872px; width: 690px; height: 138px; }
+      .s3-go .btn-label { left: 32px; top: 51px; }
+      .s3-go .btn-arrow { left: 612px; top: 43px; }
+    </style>
+  </head>
+  <body>
+    <main class="stage stage--tablet">
+      <img class="bg" src="/asset/images/avishkar/bg.png" alt="" />
+      <div class="bg-veil"></div>
+      <img class="logo" src="/asset/images/avishkar/logo.png" alt="Micron AVISHKAR" />
+
+      <section class="state state--start<%= state === 'restart' ? '' : ' is-on' %>">
+        <h1 class="t s2-heading">START<br />RACE</h1>
+        <p class="t s2-sub">Focus is your accelerator.</p>
+
+        <button class="btn btn-go s2-go" id="start" type="button">
+          <span class="btn-label">Press to Start</span>
+          <span class="btn-arrow">&#8594;</span>
+        </button>
+
+        <button class="btn btn-reset s2-reset" id="reset" type="button">
+          <span class="btn-label is-inter">Press to Reset</span>
+        </button>
+      </section>
+
+      <section class="state state--restart<%= state === 'restart' ? ' is-on' : '' %>">
+        <h1 class="t s3-heading">RACE<br />AGAIN.</h1>
+        <p class="t s3-sub">Reset your focus. Take the lead.</p>
+
+        <button class="btn btn-go s3-go" id="restart" type="button">
+          <span class="btn-label is-inter">Restart</span>
+          <span class="btn-arrow">&#8594;</span>
+        </button>
+      </section>
+    </main>
+
+    <script src="/asset/js/stage.js"></script>
+    <script>
+      var socket = io();
+
+      var startState = document.querySelector(".state--start");
+      var restartState = document.querySelector(".state--restart");
+
+      function show(which) {
+        startState.classList.toggle("is-on", which === "start");
+        restartState.classList.toggle("is-on", which === "restart");
+      }
+
+      // "start" and "stop" are the events the server already listens for; it
+      // writes 's' / 'f' to its ESP32 and relays to the peer laptop.
+      document.getElementById("start").addEventListener("click", function () {
+        socket.emit("start", {});
+      });
+
+      document.getElementById("reset").addEventListener("click", function () {
+        socket.emit("stop");
+        show("start");
+      });
+
+      document.getElementById("restart").addEventListener("click", function () {
+        socket.emit("stop");
+        socket.emit("start", {});
+        show("start");
+      });
+
+      // A finished race turns this tablet into the restart prompt, which is the
+      // only reason screen 03 exists as a separate frame.
+      socket.on("winner", function () { show("restart"); });
+    </script>
+  </body>
+</html>

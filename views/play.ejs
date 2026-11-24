@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Live gameplay</title>
+    <link rel="stylesheet" href="/asset/css/avishkar.css" />
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      /* Figma: B / 04 - Live gameplay (380:345) and B / 05 - Winner (380:400).
+         One 1920x1080 stage, two states. The background photo sits 1px higher
+         on the winner frame than on the gameplay frame - that is in the file,
+         not a rounding slip, so the state carries the offset. */
+      .stage { --bg-x: -128px; --bg-y: -72px; }
+      .stage.is-winner { --bg-y: -71px; }
+
+      .state { display: none; }
+      .state.is-on { display: block; }
+
+      /* --- 04 - Live gameplay ------------------------------------------------ */
+      .title      { left: 135px; top: 224px; width: 1650px; text-align: center;
+                    font-size: 62px; line-height: 68.2px; font-weight: 700; }
+
+      /* 380:397 - "VS", and the two rails either side of it. */
+      .vs         { left: 900px; top: 594px; width: 120px; text-align: center;
+                    font-size: 46px; line-height: 50.6px; font-weight: 700;
+                    color: var(--vs); }
+      /* The node carries the rail colour at 35% - node opacity, which the
+         structure dump does not report, so it was measured off the plate:
+         the composite sits 35% of the way from the backdrop to #cb8aff. */
+      .divider    { position: absolute; left: 959px; width: 2px; height: 130px;
+                    background: var(--rail); opacity: .35; }
+      .divider--up { top: 400px; }
+      .divider--dn { top: 720px; }
+
+      /* "B / Segmented vertical focus meter" (380:395 / 380:396). The second
+         instance is the first shifted 940px right - every node in it - so one
+         offset variable drives the whole block. */
+      .meter      { position: absolute; inset: 0; }
+      .m-eyebrow  { left: calc(160px + var(--mx)); top: 408px;
+                    font-size: 28px; line-height: 30.8px; font-weight: 700;
+                    color: var(--lilac); }
+      .m-pct      { left: calc(160px + var(--mx)); top: 552px; width: 410px;
+                    font-size: 148px; line-height: 162.8px; font-weight: 700; }
+      .m-live     { left: calc(166px + var(--mx)); top: 724px;
+                    font-size: 26px; line-height: 28.6px; font-weight: 500;
+                    color: var(--lilac); }
+      .m-name     { left: calc(160px + var(--mx)); top: 796px; width: 410px;
+                    font-size: 62px; line-height: 68.2px; font-weight: 700;
+                    overflow: hidden; text-overflow: ellipsis; }
+
+      /* 20 segments, 180x16 on a 26px pitch, filling bottom to top. */
+      .m-segments { position: absolute; left: calc(620px + var(--mx)); top: 400px;
+                    width: 180px; height: 510px; }
+      .seg        { height: 16px; border-radius: 2px; margin-bottom: 10px;
+                    background: var(--violet-dim); border: 1px solid var(--hair-30); }
+      .seg:last-child { margin-bottom: 0; }
+      .seg.is-on  { background: var(--violet); border-color: transparent; }
+      .m-scale    { left: calc(621px + var(--mx));
+                    font-size: 20px; line-height: 22px; font-weight: 500;
+                    color: var(--lilac); }
+      .m-scale--top { top: 360px; }
+      .m-scale--bot { top: 930px; }
+
+      /* --- 05 - Winner announcement ------------------------------------------ */
+      .w-eyebrow  { left: 140px; top: 266px; width: 367px;
+                    font-size: 38px; line-height: 41.8px; font-weight: 500;
+                    color: var(--lilac-soft); }
+      .w-shout    { left: 140px; top: 324px; width: 639px;
+                    font-size: 234px; line-height: 255.1px; font-weight: 700; }
+      .w-rail     { position: absolute; left: 1050px; top: 380px;
+                    width: 4px; height: 370px; background: var(--rail-strong); }
+      .w-who      { left: 1120px; top: 420px; width: 285px;
+                    font-size: 28px; line-height: 30.8px; font-weight: 700;
+                    color: var(--lilac-soft); }
+      .w-name     { left: 1120px; top: 481px; width: 650px;
+                    font-size: 100px; line-height: 110px; font-weight: 700;
+                    text-transform: uppercase;
+                    overflow: hidden; text-overflow: ellipsis; }
+      .w-tag      { left: 1120px; top: 621px; width: 650px;
+                    font-size: 25px; line-height: 27.5px; font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <main class="stage stage--wall<%= demo === 'winner' ? ' is-winner' : '' %>">
+      <img class="bg" src="/asset/images/avishkar/bg.png" alt="" />
+      <div class="bg-veil"></div>
+      <img class="logo" src="/asset/images/avishkar/logo.png" alt="Micron AVISHKAR" />
+
+      <section class="state state--race<%= demo === 'winner' ? '' : ' is-on' %>">
+        <h1 class="t title">FOCUS IS YOUR ACCELERATOR.</h1>
+
+        <div class="meter" style="--mx: 0px">
+          <p class="t m-eyebrow">PLAYER 01</p>
+          <p class="t m-pct"  id="pct1">0%</p>
+          <p class="t m-live">LIVE FOCUS</p>
+          <p class="t m-name" id="name1"><%= demo ? "Adarsh" : "Player 1" %></p>
+          <p class="t m-scale m-scale--top is-inter">100</p>
+          <div class="m-segments" id="segs1"></div>
+          <p class="t m-scale m-scale--bot is-inter">0</p>
+        </div>
+
+        <p class="t vs is-inter">VS</p>
+        <div class="divider divider--up"></div>
+        <div class="divider divider--dn"></div>
+
+        <div class="meter" style="--mx: 940px">
+          <p class="t m-eyebrow">PLAYER 02</p>
+          <p class="t m-pct"  id="pct2">0%</p>
+          <p class="t m-live">LIVE FOCUS</p>
+          <p class="t m-name" id="name2"><%= demo ? "Akshay" : "Player 2" %></p>
+          <p class="t m-scale m-scale--top is-inter">100</p>
+          <div class="m-segments" id="segs2"></div>
+          <p class="t m-scale m-scale--bot is-inter">0</p>
+        </div>
+      </section>
+
+      <section class="state state--winner<%= demo === 'winner' ? ' is-on' : '' %>">
+        <p class="t w-eyebrow">CONGRATULATIONS</p>
+        <h1 class="t w-shout">YOU<br />WON!</h1>
+        <div class="w-rail"></div>
+        <p class="t w-who" id="winnerSlot">WINNER / PLAYER 01</p>
+        <p class="t w-name" id="winnerName"><%= demo === "winner" ? "Adarsh" : "" %></p>
+        <p class="t w-tag">FOCUS. ACCELERATE. ACHIEVE.</p>
+      </section>
+    </main>
+
+    <script src="/asset/js/stage.js"></script>
+    <script>
+      var socket1 = io();                 // this laptop -> player 01
+      // Player 02 lives on the peer laptop, whose address the server supplies.
+      // Blank means there is no peer, so player 02 simply never reports -
+      // pointing it back here instead would mirror player 01 onto both meters.
+      var peerUrl = "<%= peerUrl %>";
+      var socket2 = peerUrl ? io(peerUrl) : { on: function () {} };
+
+      var SEGMENTS = 20;                  // "20 focus segments - bottom to top"
+      var PER_SEGMENT = 100 / SEGMENTS;
+
+      // Each ladder is built top-down, which is DOM order, and lit bottom-up.
+      var ladders = {};
+      [["segs1", "pct1", "name1"], ["segs2", "pct2", "name2"]].forEach(function (ids, i) {
+        var box = document.getElementById(ids[0]);
+        var cells = [];
+        for (var s = 0; s < SEGMENTS; s++) {
+          var cell = document.createElement("div");
+          cell.className = "seg";
+          box.appendChild(cell);
+          cells.push(cell);
+        }
+        ladders[i + 1] = {
+          cells: cells,
+          pct: document.getElementById(ids[1]),
+          name: document.getElementById(ids[2]),
+        };
+      });
+
+      function render(player, value) {
+        var L = ladders[player];
+        if (!L) return;
+        value = Math.max(0, Math.min(100, Math.round(value)));
+        L.pct.textContent = value + "%";
+        var lit = Math.ceil(value / PER_SEGMENT);   // 75% -> 15 of 20, as drawn
+        for (var i = 0; i < SEGMENTS; i++) {
+          // cells[0] is the topmost segment, so the lit run is the tail.
+          L.cells[i].classList.toggle("is-on", i >= SEGMENTS - lit);
+        }
+      }
+
+      socket1.on("meditation", function (v) { render(1, v); });
+      socket2.on("meditation", function (v) { render(2, v); });
+
+      var stage = document.querySelector(".stage");
+      var raceState = document.querySelector(".state--race");
+      var winState = document.querySelector(".state--winner");
+      var raceStartedAt = null;
+      var settled = false;
+
+      function showRace() {
+        settled = false;
+        stage.classList.remove("is-winner");
+        raceState.classList.add("is-on");
+        winState.classList.remove("is-on");
+      }
+
+      // Names arrive on "getUser", which the server emits when a race starts.
+      socket1.on("getUser", function (e) {
+        if (!e) return;
+        if (e.playerone) ladders[1].name.textContent = e.playerone;
+        if (e.playertwo) ladders[2].name.textContent = e.playertwo;
+        raceStartedAt = Date.now();
+        render(1, 0);
+        render(2, 0);
+        showRace();
+      });
+
+      function finish(player) {
+        if (settled) return;
+        settled = true;
+
+        var name = ladders[player].name.textContent;
+        var seconds = raceStartedAt
+          ? Math.round((Date.now() - raceStartedAt) / 1000)
+          : null;
+
+        // The master laptop owns winnerList.db, so the result always goes to
+        // socket1 regardless of which player finished.
+        socket1.emit("winnerName", { name: name, seconds: seconds });
+
+        document.getElementById("winnerSlot").textContent =
+          "WINNER / PLAYER 0" + player;
+        document.getElementById("winnerName").textContent = name;
+
+        stage.classList.add("is-winner");
+        raceState.classList.remove("is-on");
+        winState.classList.add("is-on");
+      }
+
+      // Whichever laptop's ESP32 reports first decides the winner. The older
+      // event names are kept so a peer still running the previous app.js also
+      // triggers the finish.
+      socket1.on("winner", function () { finish(1); });
+      socket1.on("winnerOne", function () { finish(1); });
+      socket2.on("winner", function () { finish(2); });
+      socket2.on("winnerOne", function () { finish(2); });
+      socket2.on("winnerTwo", function () { finish(2); });
+
+      // Demo seed: the design-time values from the Figma frame, so the screen
+      // can be diffed against the reference with no hardware attached.
+      <% if (demo === "1") { %>
+      render(1, 75);
+      render(2, 60);
+      <% } else { %>
+      render(1, 0);
+      render(2, 0);
+      <% } %>
+    </script>
+  </body>
+</html>

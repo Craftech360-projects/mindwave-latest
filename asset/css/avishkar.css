@@ -1,0 +1,169 @@
+/* ---------------------------------------------------------------------------
+   Micron AVISHKAR — shared surface for the six kiosk screens.
+
+   Generated from Figma file jk3u8GQ1wxKd3Ge5hEPLaJ, page "Page 1".
+   Every value here is a literal read off a Figma node or measured off the
+   exported plate. Do not retype a colour into a view; import the token.
+   --------------------------------------------------------------------------- */
+
+/* The design specifies Micron Basis, which is brand-licensed and not in this
+   repo. Inter stands in at the three weights the design uses; the design
+   already specifies Inter on a number of nodes, so the two mix cleanly.
+   Vendored locally so the kiosk never reaches for a network at runtime.
+   Drop MicronBasis-*.woff2 in beside these and change the three src lines. */
+/* Two families, one set of files.
+
+   "Avishkar" stands in for Micron Basis. Public Sans was picked over Inter,
+   Archivo, Figtree, Manrope, Hanken and Schibsted by rendering each against
+   the Figma plates and measuring the best-alignment pixel residue: it came
+   out a third closer than Inter. It still seats its glyphs higher in the
+   line box than Micron Basis does, which left every substituted heading 5-11px
+   above where the design puts it. The ascent override pushes the baseline back
+   down: CSS puts the first baseline at lineHeight/2 + fontSize*(ascent-descent)/2,
+   so raising the ascent by d moves the text down by fontSize*d/2. Measured
+   drift was 0.051em across nine nodes from 28px to 234px, hence +0.102em of
+   ascent. It is a property of the SUBSTITUTION, not of the design: drop real
+   MicronBasis files in and these three override lines must come out.
+
+   "AvishkarAsInter" is the same Inter with its own metrics untouched, for the
+   nodes the design itself specifies as Inter. Those already land within a
+   pixel and must not be moved. */
+@font-face { font-family: "Avishkar"; font-style: normal; font-weight: 400;
+             font-display: block; ascent-override: 106.9%; descent-override: 24.1%;
+             line-gap-override: 0%; src: url("/asset/fonts/PublicSans-400.woff2") format("woff2"); }
+@font-face { font-family: "Avishkar"; font-style: normal; font-weight: 500;
+             font-display: block; ascent-override: 106.9%; descent-override: 24.1%;
+             line-gap-override: 0%; src: url("/asset/fonts/PublicSans-500.woff2") format("woff2"); }
+@font-face { font-family: "Avishkar"; font-style: normal; font-weight: 700;
+             font-display: block; ascent-override: 106.9%; descent-override: 24.1%;
+             line-gap-override: 0%; src: url("/asset/fonts/PublicSans-700.woff2") format("woff2"); }
+
+@font-face { font-family: "AvishkarAsInter"; font-style: normal; font-weight: 400;
+             font-display: block; src: url("/asset/fonts/Inter-400.woff2") format("woff2"); }
+@font-face { font-family: "AvishkarAsInter"; font-style: normal; font-weight: 500;
+             font-display: block; src: url("/asset/fonts/Inter-500.woff2") format("woff2"); }
+@font-face { font-family: "AvishkarAsInter"; font-style: normal; font-weight: 700;
+             font-display: block; src: url("/asset/fonts/Inter-700.woff2") format("woff2"); }
+
+/* Google's latin subset carries U+2191 and U+2193 but not U+2192, so the
+   rightwards arrow on the launch buttons fell through to a system face and
+   rendered at half the height the design draws. This face carries that one
+   glyph and nothing else. */
+@font-face { font-family: "AvishkarAsInter"; font-style: normal; font-weight: 400;
+             font-display: block; unicode-range: U+2192;
+             src: url("/asset/fonts/Inter-arrow.woff2") format("woff2"); }
+
+/* Nodes the Figma file sets in Inter rather than Micron Basis. */
+.is-inter { font-family: "AvishkarAsInter", "Inter", system-ui, sans-serif; }
+
+:root {
+  --ink:        #ffffff;  /* body and heading text                        */
+  --violet:     #d351fc;  /* primary action, illuminated meter segment    */
+  --violet-dim: #13071f;  /* unlit meter segment                          */
+  --field:      #0d0417;  /* input fill, secondary button fill            */
+  --lilac:      #dcb3ff;  /* meter eyebrow and scale labels               */
+  --lilac-soft: #e4c4ff;  /* winner eyebrow                               */
+  --rail:       #cb8aff;  /* dividers, card edges, input underline        */
+  --rail-strong:#cc88ff;  /* the winner screen's accent rail (its own value) */
+  --rank:       #d6a1ff;  /* leaderboard rank numerals                    */
+  --rank-soft:  #e8ceff;  /* leaderboard place captions                   */
+  --head:       #e0b8ff;  /* leaderboard table header                     */
+  --vs:         #e0bbff;  /* the VS mark                                  */
+  --lb-first:   #40105e;  /* leaderboard first-place card                 */
+  --lb-card:    #10051b;  /* leaderboard 2nd / 3rd cards                  */
+  --lb-row:     #0b0412;  /* leaderboard table row                        */
+
+  /* Not from the Figma file: the headset lamp on the registration screen. Green
+     because it means "streaming", and a violet lamp on a violet screen is not a
+     status light. */
+  --live-ok:    #3ddc84;
+
+  /* Hairlines, measured off the plates rather than guessed. Each is --rail at
+     a different opacity, which is how the design file draws them. */
+  --hair-30:    rgba(203, 138, 255, .30);  /* table row rule, unlit segment edge */
+  --hair-60:    rgba(203, 138, 255, .60);  /* 2nd / 3rd place card edge          */
+  --hair-66:    rgba(203, 138, 255, .66);  /* secondary button edge              */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: "Avishkar", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { display: flex; align-items: center; justify-content: center; }
+
+/* The stage is always its true pixel size and is scaled to whatever panel it
+   lands on. Scaling the stage keeps every coordinate below exactly as Figma
+   measured it; a percentage layout would re-flow and the diff would stop
+   meaning anything. */
+.stage {
+  position: relative;
+  overflow: hidden;
+  transform-origin: center center;
+  flex: none;
+  background: #000;
+}
+.stage--tablet { width: 834px;  height: 1194px; }
+.stage--wall   { width: 1920px; height: 1080px; }
+
+/* The background photograph, placed at the offset its Figma node carries, and
+   the flat black veil over it. 23% is measured: the exported photo against the
+   exported plate gives a channel ratio of 0.770 in every clean region of all
+   six frames. */
+.bg {
+  position: absolute;
+  left: var(--bg-x); top: var(--bg-y);
+  width: 2176px; height: 1224px;
+}
+.bg-veil { position: absolute; inset: 1px 0 0 0; background: rgba(0, 0, 0, .23); }
+
+.logo {
+  position: absolute;
+  left: var(--logo-x, 71px); top: var(--logo-y, 81px);
+  width: 288px; height: 107px;
+}
+
+/* Absolutely positioned text. Every text node in the design becomes one of
+   these, at its own coordinates, with the line-height Figma gives it — that is
+   what makes the vertical placement land, because both Figma and CSS split
+   leading symmetrically around the glyph box. */
+.t {
+  position: absolute;
+  margin: 0;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* --- Buttons ---------------------------------------------------------------
+   Two components in the file: "B / Launch action" and "B / Reset action".
+   Size and position vary per screen, so those live in the view; everything
+   constant lives here. */
+.btn {
+  position: absolute;
+  display: block;
+  border: 0;
+  border-radius: 4px;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-go    { background: var(--violet); }
+.btn-reset { background: var(--field); }
+
+/* The label and the arrow are placed, not centred: the design offsets them from
+   the button edge by amounts that differ per screen. */
+.btn-label { position: absolute; font-size: 34px; line-height: 37.4px; font-weight: 700; }
+.btn-arrow { position: absolute; font-size: 48px; line-height: 52.8px; font-weight: 400;
+             font-family: "AvishkarAsInter", "Inter", system-ui, sans-serif; }
+
+.btn:active { filter: brightness(1.08); }

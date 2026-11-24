@@ -2,7 +2,9 @@ const express = require("express"),
   app = express(),
   server = require("http").Server(app),
   io = require("socket.io")(server),
-  port = 3000,
+  // 3000 unless told otherwise, so a second instance can run beside a live
+  // one - the kiosk itself never sets this.
+  port = process.env.PORT || 3000,
   path = require("path"),
   bodyParser = require("body-parser"),
   fs = require("fs");
@@ -57,6 +59,11 @@ try {
         const cb = args[args.length - 1];
         if (typeof cb === "function") cb.call({ lastID: 0 }, null);
       }
+      all(sql, ...args) {
+        // No database, so no history. The leaderboard renders its empty slots.
+        const cb = args[args.length - 1];
+        if (typeof cb === "function") cb(null, []);
+      }
     },
   };
 }
@@ -88,7 +95,12 @@ let usbport = null;
 // server so the client's ESP32 also gets 's'/'f'. Override with PEER_URL env.
 // If PEER_URL points at this machine itself (i.e. we ARE the client laptop),
 // the relay is disabled automatically.
-const PEER_URL = process.env.PEER_URL || "http://192.168.0.233:3000";
+// Unset keeps the venue default. Set to blank to disable the relay outright,
+// which is what a single-laptop bench wants - "||" would have swallowed that.
+const PEER_URL =
+  process.env.PEER_URL === undefined
+    ? "http://192.168.0.233:3000"
+    : process.env.PEER_URL;
 let peer = null;
 
 function isOwnAddress(url) {
@@ -104,7 +116,9 @@ function isOwnAddress(url) {
   }
 }
 
-if (isOwnAddress(PEER_URL)) {
+if (!PEER_URL) {
+  console.log("Peer relay disabled (PEER_URL is blank - single-laptop mode).");
+} else if (isOwnAddress(PEER_URL)) {
   console.log(`Peer relay disabled (${PEER_URL} is this machine - client mode).`);
 } else {
   try {
@@ -193,6 +207,11 @@ const db = new sqlite3.Database("winnerList.db", (err) => {
 
 db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
 
+// Databases written before the leaderboard screen have no finish time. ALTER
+// is the only way to add it in place, and SQLite reports "already exists" as an
+// error rather than a no-op, so the error is swallowed deliberately.
+db.run("ALTER TABLE users ADD COLUMN seconds INTEGER", () => {});
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use("/asset", express.static(path.join(__dirname, "asset")));
@@ -200,12 +219,59 @@ app.use("/asset", express.static(path.join(__dirname, "asset")));
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
+// mm:ss is what the leaderboard shows. A race is 45 seconds, so two fields
+// are enough; anything longer is clamped by the round itself.
+function mmss(seconds) {
+  if (seconds === null || seconds === undefined) return null;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+// The seven names the Figma frame was drawn with. Only reachable through
+// ?demo=1, and only so the screen can be checked without a day of races in
+// the database.
+const DEMO_BOARD = [
+  { name: "Abilash", time: "00:32" }, { name: "Akshay", time: "00:42" },
+  { name: "Ajay", time: "00:43" },    { name: "Rahul", time: "00:48" },
+  { name: "Tinku", time: "00:49" },   { name: "Ramu", time: "00:50" },
+  { name: "Soham", time: "00:52" },
+];
+
 app.get("/", function (req, res) {
-  res.render("newGuage.ejs");
+  // The screen reads player 02 straight from the peer laptop, so it needs the
+  // same address the relay uses. Hardcoding it in the view meant a bench with
+  // no second laptop retried a dead socket forever.
+  res.render("play.ejs", { demo: req.query.demo || "", peerUrl: PEER_URL });
 });
 
 app.get("/form", function (req, res) {
-  res.render("form.ejs");
+  // Player 02's headset reports to the peer laptop, so the registration screen
+  // needs the same address the gameplay screen does to light its lamp.
+  res.render("player-info.ejs", { peerUrl: PEER_URL });
+});
+
+app.get("/control", function (req, res) {
+  res.render("control.ejs", { state: req.query.state || "start" });
+});
+
+app.get("/leaderboard", function (req, res) {
+  if (req.query.demo) return res.render("leaderboard.ejs", { rows: DEMO_BOARD });
+
+  // Fastest first. Rows written before the finish-time column exists sort last
+  // rather than disappearing - a winner with no time is still a winner.
+  db.all(
+    "SELECT name, seconds FROM users ORDER BY (seconds IS NULL), seconds ASC, id ASC LIMIT 7",
+    (err, found) => {
+      if (err) {
+        console.error("Leaderboard query failed:", err.message);
+        found = [];
+      }
+      res.render("leaderboard.ejs", {
+        rows: (found || []).map((r) => ({ name: r.name, time: mmss(r.seconds) })),
+      });
+    }
+  );
 });
 
 app.get("/admin", function (req, res) {
@@ -252,7 +318,14 @@ io.on("connection", function (socket) {
 
   // Winner name wil be saved DB.
   socket.on("winnerName", (e) => {
-    db.run("INSERT INTO users (name) VALUES (?)", e, function (err) {
+    // Older game screens send a bare name; the current one sends
+    // { name, seconds } so the leaderboard has something to sort on.
+    const name = typeof e === "string" ? e : (e && e.name) || "";
+    const seconds =
+      e && typeof e === "object" && typeof e.seconds === "number" ? e.seconds : null;
+    if (!name) return;
+
+    db.run("INSERT INTO users (name, seconds) VALUES (?, ?)", name, seconds, function (err) {
       if (err) {
         console.error("Error inserting data:", err.message);
       } else {
