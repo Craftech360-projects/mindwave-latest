@@ -99,7 +99,7 @@ let usbport = null;
 // which is what a single-laptop bench wants - "||" would have swallowed that.
 const PEER_URL =
   process.env.PEER_URL === undefined
-    ? "http://192.168.0.233:3000"
+    ? "http://192.168.0.44:3000"
     : process.env.PEER_URL;
 let peer = null;
 

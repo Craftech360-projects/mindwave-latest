@@ -167,8 +167,12 @@
         }
       }
 
-      socket1.on("meditation", function (v) { render(1, v); });
-      socket2.on("meditation", function (v) { render(2, v); });
+      // Meters stay at 0% until the start signal ("getUser") arrives, and
+      // freeze again once a winner is called. The headsets stream all the
+      // time, so without this the screen shows live focus while idle.
+      var racing = false;
+      socket1.on("meditation", function (v) { if (racing) render(1, v); });
+      socket2.on("meditation", function (v) { if (racing) render(2, v); });
 
       var stage = document.querySelector(".stage");
       var raceState = document.querySelector(".state--race");
@@ -188,15 +192,24 @@
         if (!e) return;
         if (e.playerone) ladders[1].name.textContent = e.playerone;
         if (e.playertwo) ladders[2].name.textContent = e.playertwo;
+        clearTimeout(afterWinTimer);
         raceStartedAt = Date.now();
         render(1, 0);
         render(2, 0);
         showRace();
+        racing = true;
       });
 
+      // Winner screen for 5 s, then the leaderboard, which itself returns to
+      // this screen after another 5 s (it sees ?next=home).
+      var WINNER_MS = 5000;
+      var afterWinTimer = null;
+
       function finish(player) {
-        if (settled) return;
+        // A winner signal while idle (no race started) is ignored.
+        if (settled || !racing) return;
         settled = true;
+        racing = false;
 
         var name = ladders[player].name.textContent;
         var seconds = raceStartedAt
@@ -214,6 +227,10 @@
         stage.classList.add("is-winner");
         raceState.classList.remove("is-on");
         winState.classList.add("is-on");
+
+        afterWinTimer = setTimeout(function () {
+          window.location.href = "/leaderboard?next=home";
+        }, WINNER_MS);
       }
 
       // Whichever laptop's ESP32 reports first decides the winner. The older

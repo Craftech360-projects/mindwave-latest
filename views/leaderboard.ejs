@@ -115,5 +115,13 @@
     </main>
 
     <script src="/asset/js/stage.js"></script>
+    <script>
+      // Reached from the winner screen with ?next=home: show the board for
+      // 5 s, then go back to the gameplay screen. Opened directly (no param),
+      // the board stays up.
+      if (/[?&]next=home\b/.test(location.search)) {
+        setTimeout(function () { window.location.href = "/"; }, 5000);
+      }
+    </script>
   </body>
 </html>
