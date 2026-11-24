@@ -10,9 +10,9 @@ const express = require("express"),
   fs = require("fs");
 
 // --- Optional native/hardware modules. The web UI still runs if the MindWave
-// --- headset, serial device, or compiled addons (sqlite3/serialport/thinkgear)
+// --- headset, serial device, or compiled addons (serialport/thinkgear)
 // --- are missing; each falls back to a harmless stub.
-let thinkgear, SerialPort, ReadlineParser, sqlite3;
+let thinkgear, SerialPort, ReadlineParser;
 
 try {
   thinkgear = require("node-thinkgear-sockets");
@@ -46,27 +46,6 @@ try {
   ReadlineParser = class {};
 }
 
-try {
-  sqlite3 = require("sqlite3");
-} catch (e) {
-  console.warn("sqlite3 unavailable - using in-memory stub.");
-  sqlite3 = {
-    Database: class {
-      constructor(file, cb) {
-        cb && cb(null);
-      }
-      run(sql, ...args) {
-        const cb = args[args.length - 1];
-        if (typeof cb === "function") cb.call({ lastID: 0 }, null);
-      }
-      all(sql, ...args) {
-        // No database, so no history. The leaderboard renders its empty slots.
-        const cb = args[args.length - 1];
-        if (typeof cb === "function") cb(null, []);
-      }
-    },
-  };
-}
 
 const client = thinkgear.createClient({ enableRawOutput: false });
 
@@ -197,20 +176,57 @@ function writeToEsp(cmd, label) {
   });
 }
 
-const db = new sqlite3.Database("winnerList.db", (err) => {
-  if (err) {
-    console.error("Error opening database:", err.message);
-  } else {
-    console.log("Connected to the sqlite3 database");
+// --- Winner list, kept in winners.json ----------------------------------------
+// [{ name, seconds, at }] in the order they were saved. seconds is the finish
+// time in whole seconds, or null for winners saved before times were recorded.
+const WINNERS_FILE = path.join(__dirname, "winners.json");
+
+function loadWinners() {
+  try {
+    const list = JSON.parse(fs.readFileSync(WINNERS_FILE, "utf8"));
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.error("winners.json unreadable - starting a new list:", err.message);
+      // Keep the damaged file so nothing is lost by the next save.
+      try { fs.copyFileSync(WINNERS_FILE, WINNERS_FILE + ".bad-" + Date.now()); } catch (e) {}
+      return [];
+    }
+    return importOldDatabase();
   }
-});
+}
 
-db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)");
+// One-time carry-over of the winners stored in winnerList.db by earlier
+// versions. Uses Node's built-in SQLite, so no compiled addon is needed.
+function importOldDatabase() {
+  try {
+    const { DatabaseSync } = require("node:sqlite");
+    const old = new DatabaseSync(path.join(__dirname, "winnerList.db"), { readOnly: true });
+    const rows = old.prepare("SELECT * FROM users ORDER BY id").all();
+    old.close();
+    const list = rows.map((r) => ({
+      name: r.name,
+      seconds: typeof r.seconds === "number" ? r.seconds : null,
+      at: null,
+    }));
+    console.log(`Imported ${list.length} winners from winnerList.db into winners.json`);
+    saveWinners(list);
+    return list;
+  } catch (e) {
+    return [];
+  }
+}
 
-// Databases written before the leaderboard screen have no finish time. ALTER
-// is the only way to add it in place, and SQLite reports "already exists" as an
-// error rather than a no-op, so the error is swallowed deliberately.
-db.run("ALTER TABLE users ADD COLUMN seconds INTEGER", () => {});
+// Written to a temp file and renamed, so a power cut mid-write cannot leave a
+// half-written winners.json behind.
+function saveWinners(list) {
+  const tmp = WINNERS_FILE + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(list, null, 2));
+  fs.renameSync(tmp, WINNERS_FILE);
+}
+
+const winners = loadWinners();
+console.log(`${winners.length} winners loaded from winners.json`);
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -258,20 +274,18 @@ app.get("/control", function (req, res) {
 app.get("/leaderboard", function (req, res) {
   if (req.query.demo) return res.render("leaderboard.ejs", { rows: DEMO_BOARD });
 
-  // Fastest first. Rows written before the finish-time column exists sort last
-  // rather than disappearing - a winner with no time is still a winner.
-  db.all(
-    "SELECT name, seconds FROM users ORDER BY (seconds IS NULL), seconds ASC, id ASC LIMIT 7",
-    (err, found) => {
-      if (err) {
-        console.error("Leaderboard query failed:", err.message);
-        found = [];
-      }
-      res.render("leaderboard.ejs", {
-        rows: (found || []).map((r) => ({ name: r.name, time: mmss(r.seconds) })),
-      });
-    }
-  );
+  // Fastest first; ties keep the order they were saved. Winners with no time
+  // sort last rather than disappearing - a winner with no time is still a winner.
+  const top = winners
+    .map((w, i) => ({ w, i }))
+    .sort((a, b) => {
+      const sa = a.w.seconds, sb = b.w.seconds;
+      if ((sa === null) !== (sb === null)) return sa === null ? 1 : -1;
+      return (sa || 0) - (sb || 0) || a.i - b.i;
+    })
+    .slice(0, 7)
+    .map(({ w }) => ({ name: w.name, time: mmss(w.seconds) }));
+  res.render("leaderboard.ejs", { rows: top });
 });
 
 app.get("/admin", function (req, res) {
@@ -316,7 +330,7 @@ io.on("connection", function (socket) {
     if (typeof ack === "function") ack(t);
   });
 
-  // Winner name wil be saved DB.
+  // Winner name is saved to winners.json.
   socket.on("winnerName", (e) => {
     // Older game screens send a bare name; the current one sends
     // { name, seconds } so the leaderboard has something to sort on.
@@ -325,13 +339,13 @@ io.on("connection", function (socket) {
       e && typeof e === "object" && typeof e.seconds === "number" ? e.seconds : null;
     if (!name) return;
 
-    db.run("INSERT INTO users (name, seconds) VALUES (?, ?)", name, seconds, function (err) {
-      if (err) {
-        console.error("Error inserting data:", err.message);
-      } else {
-        console.log(`Row inserted with ID: ${this.lastID}`);
-      }
-    });
+    winners.push({ name, seconds, at: new Date().toISOString() });
+    try {
+      saveWinners(winners);
+      console.log(`Winner saved to winners.json: ${name} (${seconds}s)`);
+    } catch (err) {
+      console.error("Error saving winners.json:", err.message);
+    }
   });
 
   fs.readFile("selectedPort.json", (err, data) => {
